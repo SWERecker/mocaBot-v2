@@ -1,2 +1,2 @@
 # mocaBot-v2
- a re-written mocaBot
+ a re-written mocaBot based on [mirai](https://github.com/mamoe/mirai)
