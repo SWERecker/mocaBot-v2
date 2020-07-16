@@ -1,5 +1,5 @@
 #Configure your host name
-server_name = '192.168.1.225'
+server_name = 'moca.swenetech.xyz'
 server_port = 5700
 
 # MiraiAPIHTTP
@@ -12,3 +12,5 @@ verify_url = 'http://{}:{}/verify'.format(server_name,server_port)
 groupMessage_url = 'http://{}:{}/sendGroupMessage'.format(server_name,server_port)
 friendMessage_url = 'http://{}:{}/sendFriendMessage'.format(server_name,server_port)
 tempMessage_url = 'http://{}:{}/sendTempMessage'.format(server_name,server_port)
+
+ws_addr = 'ws://{}:{}/message?sessionKey='.format(server_name, server_port)

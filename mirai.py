@@ -17,11 +17,11 @@ def mirai_auth():
     #logging.info(r_auth_json.text)
     r_auth_json = json.loads(r_auth_json.text)
     config.verify_data['sessionKey'] = r_auth_json.get('session')
-    
+
     r_verify_json = requests.post(config.verify_url, json.dumps(config.verify_data))
     r_verify_json = json.loads(r_verify_json.text)
     #logging.info('收到：' + str(r_verify_json))
-    
+
     if(r_verify_json.get('code') == 0):
         logging.info('收到sessionKey:{}, 储存到临时文件, 设置超时时间:25分钟, 将新json写入本地文件'.format(r_auth_json.get('session')))
         auth_json['auth_key'] = r_auth_json['session']
@@ -33,8 +33,8 @@ def mirai_auth():
     else:
         logging.error('返回错误，错误代码：{}'.format(r_verify_json.get('code')))
         return r_verify_json.get('code')
-        
-        
+
+
 def check_if_key_expire(cache_time):
     '''
     功能：检查时间戳是否超时
@@ -48,8 +48,8 @@ def check_if_key_expire(cache_time):
         return True
     else:
         return False
- 
-        
+
+
 def mirai_init_auth_key():
     '''
     功能：初始化mirai认证
@@ -65,7 +65,7 @@ def mirai_init_auth_key():
         logging.warning("IOError:打开本地auth.json失败")
         local_auth_key = ''
         local_expire_time = 0
-        
+
     if(local_auth_key == '' or check_if_key_expire(local_expire_time)):
         logging.info("无本地缓存sessionKey或者sessionKey已超时,更新sessionKey")
         return mirai_auth()
@@ -74,7 +74,7 @@ def mirai_init_auth_key():
         return local_auth_key
 
 
-        
+
 
 def mirai_reply_text(target_id, session_key, text, friend=False):
     '''
@@ -115,12 +115,12 @@ def mirai_reply_image(target_id, session_key, path = '', image_id = '', friend=F
     '''
     if(not target_id == '' and not session_key == ''):
         data_dict = {"sessionKey": session_key ,"target": target_id ,"messageChain": [{"type" : "Image"}]}
-        
+
         if( path == '' ):
             data_dict['messageChain'][0]['imageId'] = image_id
         elif( image_id == '' ):
             data_dict['messageChain'][0]['path'] = path
-            
+
         final_data = json.dumps(data_dict).replace('\'','"').strip('"')
         if(not friend):
             message_type = 'GROUP'
@@ -140,21 +140,25 @@ def mirai_reply_message_chain(target_id, session_key, message, friend=False):
     功能：回复messageChain
     参数：{
         target_id    :  群号/QQ号,
-        session_key  :  sessionKey, 
+        session_key  :  sessionKey,
         message      :  messageChain 是一个列表(List)，包含要发送的messageChain,
         friend       :  True/False [是否为好友消息]
     }
     返回：正常时返回post的返回值(json string)，参数错误时返回"error_invalid_parameter"
     '''
+    message_type = ''
     if(not target_id == '' and not session_key == ''):
         data_dict = {"sessionKey": session_key ,"target": target_id ,"messageChain": message }
-        
+
         final_data = json.dumps(data_dict).replace('\'','"').strip('"')
         if(not friend):
-            res = requests.post(url=config.groupMessageUrl, data=final_data)
+            res = requests.post(url=config.groupMessage_url, data=final_data)
+            message_type='GROUP'
         else:
-            res = requests.post(url=config.friendMessageUrl, data=final_data)
+            res = requests.post(url=config.friendMessage_url, data=final_data)
+            message_type='FRIEND'
         r_json = json.loads(res.text)
+        logging.info("[EVENT] reply_image => {m_type}, {target} : messageChain:{msg}".format(target=target_id,m_type=message_type,msg=message))
         return r_json.get('code'), r_json.get('messageId')
     else:
         return 'error_invalid_parameter'
@@ -186,8 +190,8 @@ def mirai_fetch_user_id(data):
         return data["sender"]["id"]
     except Exception as e:
         return 0
-        
-        
+
+
 def mirai_fetch_sender_permission(data):
     '''
     功能：取用户在群组中的权限（分为普通用户MEMBER，管理员ADMINISTRATOR，群主OWNER）
@@ -228,8 +232,8 @@ def mirai_fetch_message_type(data):
         return data["type"]
     except Exception as e:
         return 'error_undefined'
-        
-        
+
+
 def mirai_fetch_text(data):
     '''
     功能：取文字消息
@@ -244,8 +248,8 @@ def mirai_fetch_text(data):
             texts += data["messageChain"][n]["text"]
             texts = texts.replace(" ","")
     return texts
-    
-    
+
+
 def mirai_fetch_image_id(data):
     '''
     功能：取收到图片的ID
@@ -259,8 +263,8 @@ def mirai_fetch_image_id(data):
         if(data["messageChain"][n]["type"] == "Image"):
             image_ids.append(data["messageChain"][n]["imageId"])
     return image_ids
-    
-    
+
+
 def mirai_fetch_image_url(data):
     '''
     功能：取收到图片的URL
