@@ -158,7 +158,7 @@ def mirai_reply_message_chain(target_id, session_key, message, friend=False):
             res = requests.post(url=config.friendMessage_url, data=final_data)
             message_type='FRIEND'
         r_json = json.loads(res.text)
-        logging.info("[EVENT] reply_image => {m_type}, {target} : messageChain:{msg}".format(target=target_id,m_type=message_type,msg=message))
+        logging.info("[EVENT] reply_message_chain => {m_type}, {target} : messageChain:{msg}".format(target=target_id,m_type=message_type,msg=message))
         return r_json.get('code'), r_json.get('messageId')
     else:
         return 'error_invalid_parameter'

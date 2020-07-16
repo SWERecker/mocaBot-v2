@@ -1,0 +1,16 @@
+C:\Users\{username}\AppData\Local\Programs\Python\Python38\Lib\logging\__init__.py
+
+fix logging coding
+
+- class FileHandler(StreamHandler):
+-     """
+-     A handler class which writes formatted logging records to disk files.
+-     """
+-     def __init__(self, filename, mode='a', encoding=None, delay=False):
+													   ↑
++ class FileHandler(StreamHandler):
++     """
++     A handler class which writes formatted logging records to disk files.
++     """
++     def __init__(self, filename, mode='a', encoding='utf-8', delay=False):
+														 ↑

@@ -1,4 +1,4 @@
-#Configure your host name
+# Configure your host name
 server_name = 'moca.swenetech.xyz'
 server_port = 5700
 

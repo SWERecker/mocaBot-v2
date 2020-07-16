@@ -126,3 +126,4 @@ dmypy.json
 *.sqlite3
 log.txt
 auth.json
+test.py

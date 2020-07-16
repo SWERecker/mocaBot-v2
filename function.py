@@ -2,7 +2,7 @@ import sqlite3
 import json
 import logging
 import random
-
+from mirai import *
 def update_lp(c, qq, lp_name):
     '''
     功能：更新设置的lp
@@ -83,7 +83,7 @@ def random_do(chance):
     返回：发生(True)，不发生(False)
     '''
     seed = random.random()
-    true_chance = chance / 100
+    true_chance = int(chance) / 100
     if(seed < true_chance):
         return True
     else:
@@ -119,11 +119,11 @@ def fetch_processed_message_chain(group_id, data):
         if(data[n].get('type') == 'Image'):
             del data[n]["url"]
             del data[n]["path"]
-    data['group_id'] = group_id
+    data.append({'group_id':group_id})
     return data
 
 
-def load_keyword_list(c, r, group_id):
+def init_keyword_list(c, r, group_id):
     '''
     功能：从SQLite中加载关键词列表到Redis内存数据库中，在Redis中存储至key_{群号},格式为json字符串
     参数：{
@@ -133,11 +133,73 @@ def load_keyword_list(c, r, group_id):
     }
     返回：1
     '''
-    cursor = c.execute('select NAME,KEYWORD from "key_{group}"'.format(group=group_id))
+    cursor = c.execute('select NAME,KEYWORD from "key_{}"'.format(group_id))
     keyword_list = {}
     for row in cursor:
         keyword_list[row[0]] = row[1]
     json_data = json.dumps(keyword_list,ensure_ascii=False)
     r.set('key_{}'.format(group_id), json_data)
-    r.set('keyword_loaded','1')
     return 1
+
+
+def init_config(c, r, group_id):
+    cursor = c.execute('select NAME,PARA from "config_{}"'.format(group_id))
+    config_list = {}
+    for row in cursor:
+        config_list[row[0]] = row[1]
+    json_data = json.dumps(config_list,ensure_ascii=False)
+    r.set('config_{}'.format(group_id), json_data)
+    return 1
+
+
+def get_config(r, group_id, arg):
+    if(r.exists('config_{}'.format(group_id))):
+        json_dict = json.loads(r.get('config_{}'.format(group_id)))
+    return json_dict.get(arg)
+
+
+def repeater(r, group_id, session_key, message):
+    #缓存消息 ===
+    m_cache_0 = ''
+    m_cache_1 = ''
+    if(r.get("m_count_{}".format(group_id)) == None):
+        r.set("m_count_{}".format(group_id), '0')
+    m_count = int(r.get("m_count_{}".format(group_id)))
+    processed_message_chain = fetch_processed_message_chain(group_id, message)
+    if(m_count < 2):
+        r.set("m_cache_{}_{}".format(group_id,m_count), str(processed_message_chain))    #拼接字符串（群号+内容）
+        r.set("m_count_{}".format(group_id), str(m_count + 1))   #消息计数+1
+    else:   #收到了大于两条的消息后
+        r.set("m_cache_{}_0".format(group_id), r.get("m_cache_{}_1".format(group_id)))  #将后缓存的内容替换掉前面缓存的内容
+        r.set("m_cache_{}_1".format(group_id) , str(processed_message_chain))
+    #缓存消息 ===
+    
+    if(r.exists("m_cache_{}_0".format(group_id))):
+        m_cache_0 = json.loads(r.get("m_cache_{}_0".format(group_id)).replace("'", '"'))
+    if(r.exists("m_cache_{}_1".format(group_id))):
+        m_cache_1 = json.loads(r.get("m_cache_{}_1".format(group_id)).replace("'", '"'))
+    
+    if(m_cache_0 == m_cache_1 and r.get("do_not_repeat_{}".format(group_id)) == '0'):
+        if( not is_in_repeat_cd(r, group_id) ):
+            if(random_do(get_config(r, group_id, "repeatChance")) ):
+                logging.info ("[{}] 命中复读条件且不在cd中且命中概率，开始复读".format(group_id))
+                del processed_message_chain[len(processed_message_chain) - 1]
+                mirai_reply_message_chain(group_id, session_key, processed_message_chain)
+                update_repeat_cd(r, group_id)
+            else:
+                logging.info ("[{}] 未命中复读概率".format(group_id))  
+        else:
+            logging.info ("[{}] 复读cd冷却中".format(group_id))      
+            
+
+def is_in_repeat_cd(r, group_id):
+    stat = r.get('in_repeat_cd_{}'.format(group_id))
+    if(stat == '1'):
+        return True
+    else:
+        return False
+        
+        
+def update_repeat_cd(r, group_id):
+    group_cd = get_config(r, group_id, "repeatCD")
+    r.set('in_repeat_cd_{}'.format(group_id), '1', ex=int(group_cd))
