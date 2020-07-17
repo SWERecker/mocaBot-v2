@@ -25,9 +25,8 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
                 logging.info("[{}] => {}".format(group_id, message_chain))
                 r.set('group_{}_handling'.format(group_id), '1')
                 r.set('at_moca_{}'.format(group_id), at_bot)  # 设置atMoca标志
-                do_not_repeat_flag = mirai_group_message_handler(r, group_id, session_key, fetch_text(message_chain), sender_permission)
-                if not do_not_repeat_flag:
-                    repeater(r, group_id, session_key, message_chain)
+                mirai_group_message_handler(r, group_id, session_key, fetch_text(message_chain), sender_permission)
+                repeater(r, group_id, session_key, message_chain)
         if message_type == 'FriendMessage':
             pass
         if message_type == 'TempMessage':
@@ -37,7 +36,7 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
     finally:
         r.set('at_moca_{}'.format(group_id), '0')  # 复位atMoca标志
         r.set('group_{}_handling'.format(group_id), '0')
-
+        r.set("do_not_repeat_{}".format(group_id), '0')
 
 def on_message(ws, message):  # 接受ws数据
     data = mirai_json_process(3270612406, message)
@@ -67,6 +66,7 @@ def on_open(ws):  # 打开ws时
     for g_id in group_list:
         init_keyword_list(r, g_id)
         # init_config(conn_cursor, r, g_id)
+        init_files_list()
         r.set('group_{}_handling'.format(g_id), '0')
         r.set("do_not_repeat_{}".format(g_id), '0')
 

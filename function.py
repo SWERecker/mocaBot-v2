@@ -2,6 +2,7 @@ import json
 import logging
 import sqlite3
 import random
+import redis
 from mirai import *
 from prettytable import PrettyTable
 from PIL import Image, ImageDraw, ImageFont
@@ -146,15 +147,27 @@ def init_keyword_list(r, group_id):
     """
     conn = sqlite3.connect('mocabot.sqlite3')
     c = conn.cursor()
-    cursor = c.execute('select NAME,KEYWORD from "key_{}"'.format(group_id))
-    keyword_list = {}
+    cursor = c.execute("SELECT KEYWORD from 'KEYWORDS' WHERE GROUPID='{}'".format(group_id))
     for row in cursor:
-        keyword_list[row[0]] = row[1]
-    json_data = json.dumps(keyword_list, ensure_ascii=False)
-    r.set('key_{}'.format(group_id), json_data)
+        r.set('key_{}'.format(group_id), row[0])
     conn.close()
 
     return 1
+
+
+def init_files_list():
+    """
+    功能：读取文件列表缓存至Redis数据库
+    参数：{}
+    返回：1
+    """
+    pool = redis.ConnectionPool(host='localhost', port=6379, decode_responses=True)
+    r = redis.Redis(connection_pool=pool)
+    names_list = os.listdir(config.mirai_path + "\\plugins\\MiraiAPIHTTP\\images\\pic\\")
+    for name in names_list:
+        file_list = os.listdir(config.mirai_path + "\\plugins\\MiraiAPIHTTP\\images\\pic\\" + name + "\\")
+        r.set(name, json.dumps(file_list, ensure_ascii=False))
+        logging.info("saving {} to redis, data : {}".format(name, file_list))
 
 
 # def init_config(c, r, group_id):
@@ -187,12 +200,13 @@ def get_config(group_id, arg):
     """
     conn = sqlite3.connect('mocabot.sqlite3')
     conn_cursor = conn.cursor()
-    cursor = conn_cursor.execute('select PARA from config_{} WHERE NAME="{}"'.format(group_id, arg))
+    cursor = conn_cursor.execute('select CONTENT from CONFIG WHERE NAME="{}"'.format(group_id))
 
     for l in cursor.fetchall():
         if l:
-            logging.debug("{} : {}".format(arg, l[0]))
-            return l[0]
+            config_data = json.loads(l[0])
+            logging.info('[{}] GET CONFIG {} = {}'.format(group_id, arg, config_data.get(arg)))
+            return config_data.get(arg)
         else:
             return None
 
@@ -336,7 +350,19 @@ def create_dict_pic(data, group_id, content):
 
 
 def update_count(group_id, name):
+    logging.info("[{}] {} + 1".format(group_id, name))
+
     return 1
+
+def rand_pic(keys):
+    pool = redis.ConnectionPool(host='localhost', port=6379, decode_responses=True)
+    r = redis.Redis(connection_pool=pool)
+    file_list = json.loads(r.get(keys))
+    random.shuffle(file_list)
+    logging.info("{} => {}".format(keys, file_list))
+    random_file = random.choice(file_list)
+    logging.info("Chose {}".format(random_file))
+    return random_file
 
 
 def get_count_dict(group_id):
@@ -368,7 +394,7 @@ def mirai_group_message_handler(r, group_id, session_key, text, sender_permissio
         if '说明' in text or 'help' in text or '帮助' in text:
             mirai_reply_text(group_id, session_key, '使用说明：https://wiki.bang-dream.tech/')
             logging.info("[{}] 请求使用说明".format(group_id))
-            return True
+            r.set("do_not_repeat_{}".format(group_id), '1')
 
         if '关键词' in text:
             if not is_in_cd(r, group_id, "replyHelpCD"):
@@ -379,7 +405,7 @@ def mirai_group_message_handler(r, group_id, session_key, text, sender_permissio
                 update_cd(r, group_id, "replyHelpCD")
             else:
                 logging.info("[{}] 关键词列表cd冷却中".format(group_id))
-            return True
+            r.set("do_not_repeat_{}".format(group_id), '1')
 
         if "统计次数" in text:
             if not is_in_cd(r, group_id, "replyHelpCD"):
@@ -390,7 +416,7 @@ def mirai_group_message_handler(r, group_id, session_key, text, sender_permissio
                 update_cd(r, group_id, "replyHelpCD")
             else:
                 logging.info("[{}] 统计次数cd冷却中".format(group_id))
-            return True
+            r.set("do_not_repeat_{}".format(group_id), '1')
 
         if "爬" in text or "爪巴" in text:
             if not is_in_cd(r, group_id, "replyCD"):
@@ -402,7 +428,7 @@ def mirai_group_message_handler(r, group_id, session_key, text, sender_permissio
                     logging.info("[{}] moca爬，但是没有命中概率".format(group_id))
             else:
                 logging.info("[{}] moca爬，但是cd冷却中".format(group_id))
-            return True
+            r.set("do_not_repeat_{}".format(group_id), '1')
 
         if "可爱" in text or "老婆" in text or "lp" in text or "mua" in text:
             if not is_in_cd(r, group_id, "replyCD"):
@@ -414,7 +440,7 @@ def mirai_group_message_handler(r, group_id, session_key, text, sender_permissio
                     logging.info("[{}] moca可爱，但是没有命中概率".format(group_id))
             else:
                 logging.info("[{}] moca可爱，但是cd冷却中".format(group_id))
-            return True
+            r.set("do_not_repeat_{}".format(group_id), '1')
     else:
         if "moca爬" in text or "moca爪巴" in text:
             if not is_in_cd(r, group_id, "replyCD"):
@@ -426,7 +452,7 @@ def mirai_group_message_handler(r, group_id, session_key, text, sender_permissio
                     logging.info("[{}] moca爬，但是没有命中概率".format(group_id))
             else:
                 logging.info("[{}] moca爬，但是cd冷却中".format(group_id))
-            return True
+            r.set("do_not_repeat_{}".format(group_id), '1')
 
         if "moca可爱" in text or "moca老婆" in text:
             if not is_in_cd(r, group_id, "replyCD"):
@@ -438,10 +464,21 @@ def mirai_group_message_handler(r, group_id, session_key, text, sender_permissio
                     logging.info("[{}] moca可爱，但是没有命中概率".format(group_id))
             else:
                 logging.info("[{}] moca可爱，但是cd冷却中".format(group_id))
-            return True
+            r.set("do_not_repeat_{}".format(group_id), '1')
 
+        group_keywords = json.loads(r.get('key_{}'.format(group_id)))
+        for keys in group_keywords:  # 在字典中遍历查找
+            for e in range(len(group_keywords[keys])):  # 遍历名称
+                if text == group_keywords[keys][e]:  # 若命中名称
+                    if not is_in_cd(r, group_id, "replyCD"):  # 判断是否在回复图片的cd中
+                        logging.info("[{}] 请求：{}".format(group_id, keys))
+                        pic_name = rand_pic(keys)
+                        mirai_reply_image(group_id, session_key, path='pic\\' + keys + '\\' + pic_name)
+                        update_count(group_id, keys)  # 更新统计次数
+                        update_cd(r, group_id, "replyCD")  # 更新cd
+                    r.set("do_not_repeat_{}".format(group_id), '1')
+                    break  # 跳出循环
         if sender_permission == 'ADMINISTRATOR' or sender_permission == 'OWNER':
             pass
 
-    return False
 
