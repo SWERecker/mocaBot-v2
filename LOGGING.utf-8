@@ -7,10 +7,10 @@ fix logging coding
 -     A handler class which writes formatted logging records to disk files.
 -     """
 -     def __init__(self, filename, mode='a', encoding=None, delay=False):
-													   ↑
+                                                       ↑
 + class FileHandler(StreamHandler):
 +     """
 +     A handler class which writes formatted logging records to disk files.
 +     """
 +     def __init__(self, filename, mode='a', encoding='utf-8', delay=False):
-														 ↑
+                                                         ↑
