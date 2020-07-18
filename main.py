@@ -9,34 +9,35 @@ import websocket
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S', filename='log.txt', filemode='a')
 
-
-def load_group_list():
-    group_list = [1141220711]
-    return group_list
+session_key = mirai_init_auth_key()
+pool = redis.ConnectionPool(host='localhost', port=6379, decode_responses=True)
+r = redis.Redis(connection_pool=pool)
 
 
 def mirai_message_handler(message_type, message_id, message_time, sender_id, sender_permission, group_id, at_bot,
                           message_chain):
-    global session_key, r, conn, conn_cursor
     try:
-        group_list = load_group_list()
         if message_type == 'GroupMessage':
             if group_id in group_list:
-                logging.info("[{}] => {}".format(group_id, message_chain))
+                logging.info("[GROUP] [{}] {},{} => {}".format(group_id, message_id, message_time, message_chain))
                 r.set('group_{}_handling'.format(group_id), '1')
                 r.set('at_moca_{}'.format(group_id), at_bot)  # 设置atMoca标志
-                mirai_group_message_handler(r, group_id, session_key, fetch_text(message_chain), sender_permission)
-                repeater(r, group_id, session_key, message_chain)
+                mirai_group_message_handler(group_id, session_key, fetch_text(message_chain), sender_permission)
+                repeater(group_id, session_key, message_chain)
         if message_type == 'FriendMessage':
-            pass
+            logging.info("[FRIEND] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
+
         if message_type == 'TempMessage':
-            pass
+            logging.info("[TEMP] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
     except Exception as e:
         logging.error(repr(e))
     finally:
         r.set('at_moca_{}'.format(group_id), '0')  # 复位atMoca标志
         r.set('group_{}_handling'.format(group_id), '0')
         r.set("do_not_repeat_{}".format(group_id), '0')
+        if not r.get('file_list_init') == '1':
+            init_files_list()
+
 
 def on_message(ws, message):  # 接受ws数据
     data = mirai_json_process(3270612406, message)
@@ -50,64 +51,39 @@ def on_error(ws, error):
 
 
 def on_close(ws):
-    global session_key, r, conn, conn_cursor
     r.flushall()
-    conn.commit()
-    conn.close()
     logging.info("CLOSING WEBSOCKET")  # 记录ws关闭连接
-    user_input = input("Restart?[y/n]: \n")
+    user_input = input("Restart?[y/N]: \n")
     if user_input.lower() == "y":
-        session_key, r, conn, conn_cursor = init_main()
-        ws_open()
+        os.system('python main.py')
 
 
 def on_open(ws):  # 打开ws时
-    group_list = load_group_list()
-    for g_id in group_list:
-        init_keyword_list(r, g_id)
-        # init_config(conn_cursor, r, g_id)
-        init_files_list()
-        r.set('group_{}_handling'.format(g_id), '0')
-        r.set("do_not_repeat_{}".format(g_id), '0')
-
     print('initialized websocket')
 
 
-def ws_open():
-    # websocket.enableTrace(True)    #Websocket调试模式
-    ws = websocket.WebSocketApp(
-        config.ws_addr + session_key,
-        on_message=on_message,
-        on_error=on_error,
-        on_close=on_close
-    )  # 创建websocket连接
-    ws.on_open = on_open  # 打开websocket
-    ws.run_forever(ping_interval=120, ping_timeout=5)  # 每120秒发送心跳包，维持websocket长连接
+def event_process():
+    os.system('python event.py')
 
 
-def init_main():
-    global session_key, conn, conn_cursor
-    session_key = mirai_init_auth_key()
-    pool = redis.ConnectionPool(host='localhost', port=6379, decode_responses=True)
-    r = redis.Redis(connection_pool=pool)
+group_list = load_group_list()
+for g_id in group_list:
+    init_keyword_list(g_id)
+    r.set('group_{}_handling'.format(g_id), '0')
+    r.set("do_not_repeat_{}".format(g_id), '0')
+init_files_list()
+init_keaipa_list()
 
-    conn = sqlite3.connect('mocabot.sqlite3')
-    conn_cursor = conn.cursor()
-    return session_key, r, conn, conn_cursor
+t = threading.Thread(target=event_process)
+t.setDaemon(True)
+t.start()
 
-
-pool = redis.ConnectionPool(host='localhost', port=6379, decode_responses=True)
-r = redis.Redis(connection_pool=pool)
-conn = sqlite3.connect('mocabot.sqlite3')
-conn_cursor = conn.cursor()
-cursor = conn_cursor.execute('select "CONTENT" from "KEAIPA" WHERE "NAME"="KEAI"')
-for row in cursor:
-    keai_list = json.loads(row[0])
-cursor = conn_cursor.execute('select "CONTENT" from "KEAIPA" WHERE "NAME"="PA"')
-for row in cursor:
-    pa_list = json.loads(row[0])
-r.set('keai_list', json.dumps(keai_list, ensure_ascii=False))
-r.set('pa_list', json.dumps(pa_list, ensure_ascii=False))
-
-session_key, r, conn, conn_cursor = init_main()
-ws_open()
+# websocket.enableTrace(True)    #Websocket调试模式
+ws = websocket.WebSocketApp(
+    config.ws_addr + session_key,
+    on_message=on_message,
+    on_error=on_error,
+    on_close=on_close
+)  # 创建websocket连接
+ws.on_open = on_open  # 打开websocket
+ws.run_forever(ping_interval=120, ping_timeout=5)  # 每120秒发送心跳包，维持websocket长连接
