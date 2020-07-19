@@ -521,10 +521,9 @@ def get_count_dict(group_id):
     """
     conn = sqlite3.connect('mocabot.sqlite3')
     conn_cursor = conn.cursor()
-    cursor = conn_cursor.execute('SELECT NAME,COUNT FROM "count_{}"'.format(group_id))
-    count_list = {}
-    for row in cursor:
-        count_list[row[0]] = row[1]
+    cursor = conn_cursor.execute('SELECT CONTENT FROM COUNT WHERE NAME="{}"'.format(group_id))
+    count_list = json.loads(list(cursor)[0][0])
+    conn.close()
     return count_list
 
 
