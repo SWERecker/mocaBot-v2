@@ -199,7 +199,7 @@ def init_files_list():
         r.set(name, json.dumps(file_list, ensure_ascii=False))
         logging.debug("saving {} to redis, data : {}".format(name, file_list))
     logging.info('已重建图片索引')
-    r.set('file_list_init', '1', ex=300)
+    r.set('file_list_init', '1', ex=600)
 
 
 def init_quotation_list():
@@ -413,8 +413,8 @@ def create_dict_pic(data, group_id, content):
     tab.align["名称"] = "l"
     # 表格内容插入
     tab.add_row(["", ""])
-    for name in data:
-        tab.add_row([name, data[name]])
+    for item in sorted(data.items(), key=lambda d: d[1], reverse=True):
+        tab.add_row([item[0], item[1]])
     tab_info = str(tab).replace("[", "").replace("]", "").replace(",", ", ").replace("'", " ")
     space = 50
     # PIL模块中，确定写入到图片中的文本字体
@@ -596,7 +596,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
             r.set("do_not_repeat_{}".format(group_id), '1')
             return
 
-        if "统计次数" in text:
+        if "统计次数" in text or "次数统计" in text:
             if not is_in_cd(group_id, "replyHelpCD"):
                 logging.info("[{}] 请求统计次数".format(group_id))
                 json_data = get_count_dict(group_id)
@@ -764,10 +764,11 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
 
         if "来点wlp" in text or "来点lp" in text or "来点老婆" in text or "来点我老婆" in text:
             lp_name = fetch_lp(sender_id)
-            if not is_in_cd(group_id, "replyCD"):
+            if not is_in_cd(group_id, "replyCD") or sender_id == 565379987:
                 if lp_name and lp_name in group_keywords:
                     pic_name = rand_pic(lp_name)
                     mirai_reply_image(group_id, session_key, path='pic\\' + lp_name + '\\' + pic_name)
+                    update_count(group_id, lp_name)  # 更新统计次数
                 else:
                     mirai_reply_text(group_id, session_key, 'az，似乎你还没有设置lp呢，用“wlp是xxx”来设置一个吧')
             r.set("do_not_repeat_{}".format(group_id), '1')
@@ -782,8 +783,8 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                 else:
                     mirai_reply_text(group_id, session_key, 'az，没有找到nlp呢...')
             else:
-                if match_lp(lp_name, group_keywords):
-                    true_lp_name = match_lp(lp_name, group_keywords)
+                true_lp_name = match_lp(lp_name, group_keywords)
+                if true_lp_name:
                     update_lp(sender_id, true_lp_name)
                     mirai_reply_text(group_id, session_key, '用户{}设置lp为: {}'.format(sender_id, true_lp_name))
                 else:
