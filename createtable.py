@@ -22,9 +22,9 @@ import os
 conn = sqlite3.connect('mocabot.sqlite3')
 c = conn.cursor()
 
-c.execute('''CREATE TABLE COUNT
+c.execute('''CREATE TABLE QUOTATION
        (ID             INTEGER PRIMARY KEY   AUTOINCREMENT,
-       NAME            TEXT                  NOT NULL,
+       KEYS            TEXT                  NOT NULL,
        CONTENT         TEXT               NOT NULL);''')
 conn.commit()
 conn.close()

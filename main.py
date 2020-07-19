@@ -22,11 +22,10 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
                 logging.info("[GROUP] [{}] {},{} => {}".format(group_id, message_id, message_time, message_chain))
                 r.set('group_{}_handling'.format(group_id), '1')
                 r.set('at_moca_{}'.format(group_id), at_bot)  # 设置atMoca标志
-                mirai_group_message_handler(group_id, session_key, fetch_text(message_chain), sender_permission)
+                mirai_group_message_handler(group_id, session_key, fetch_text(message_chain), sender_permission, sender_id)
                 repeater(group_id, session_key, message_chain)
         if message_type == 'FriendMessage':
             logging.info("[FRIEND] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
-
         if message_type == 'TempMessage':
             logging.info("[TEMP] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
     except Exception as e:
@@ -73,6 +72,7 @@ for g_id in group_list:
     r.set("do_not_repeat_{}".format(g_id), '0')
 init_files_list()
 init_keaipa_list()
+init_quotation_list()
 
 t = threading.Thread(target=event_process)
 t.setDaemon(True)
