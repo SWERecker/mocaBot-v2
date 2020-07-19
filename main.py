@@ -6,7 +6,7 @@ import redis
 import threading
 import websocket
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s',
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s [%(levelname)s] %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S', filename='log.txt', filemode='a')
 
 session_key = mirai_init_auth_key()

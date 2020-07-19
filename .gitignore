@@ -127,3 +127,4 @@ dmypy.json
 log.txt
 auth.json
 test.py
+group.list

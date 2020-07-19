@@ -1,5 +1,5 @@
 # Configure your host name
-server_name = 'moca.swenetech.xyz'
+server_name = '127.0.0.1'
 server_port = 5700
 
 # MiraiAPIHTTP
