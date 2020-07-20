@@ -215,8 +215,10 @@ def init_quotation_list():
     temp_data = {}
     i = 0
     for row in cursor:
+        # keys = row[0].replace(' ', '').split(',')
+        # data = row[1].replace(' ', '').split(',')
         keys = row[0].replace(' ', '').split(',')
-        data = row[1].replace(' ', '').split(',')
+        data = row[1].split(',')
         temp_data[str(i)] = {"key": keys, "quo": data}
         i += 1
     conn.close()
