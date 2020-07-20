@@ -143,6 +143,8 @@ def fetch_processed_message_chain(group_id, data):
         if data[n].get('type') == 'Image':
             del data[n]["url"]
             del data[n]["path"]
+        if data[n].get("type") == 'Plain':
+            data[n]["text"].replace("'", "\'")
     data.append({'group_id': group_id})
     return data
 
@@ -337,18 +339,23 @@ def repeater(group_id, session_key, message):
     m_count = int(r.get("m_count_{}".format(group_id)))
     processed_message_chain = fetch_processed_message_chain(group_id, message)
     if m_count < 2:
-        r.set("m_cache_{}_{}".format(group_id, m_count), str(processed_message_chain))  # 拼接字符串（群号+内容）
+        r.set("m_cache_{}_{}".format(group_id, m_count), json.dumps(processed_message_chain, ensure_ascii=False))
         r.set("m_count_{}".format(group_id), str(m_count + 1))  # 消息计数+1
     else:  # 收到了大于两条的消息后
         r.set("m_cache_{}_0".format(group_id), r.get("m_cache_{}_1".format(group_id)))  # 将后缓存的内容替换掉前面缓存的内容
-        r.set("m_cache_{}_1".format(group_id), str(processed_message_chain))
+        r.set("m_cache_{}_1".format(group_id), json.dumps(processed_message_chain, ensure_ascii=False))
     # 缓存消息 ===
 
     if r.exists("m_cache_{}_0".format(group_id)):
-        m_cache_0 = json.loads(r.get("m_cache_{}_0".format(group_id)).replace("'", '"'))
+        # m_cache_0 = json.loads(r.get("m_cache_{}_0".format(group_id)).replace("'", '"'))
+        json_data_0 = json.dumps(eval(r.get("m_cache_{}_0".format(group_id))))
+        m_cache_0 = json.loads(json_data_0)
+        logging.debug(m_cache_0)
     if r.exists("m_cache_{}_1".format(group_id)):
-        m_cache_1 = json.loads(r.get("m_cache_{}_1".format(group_id)).replace("'", '"'))
-
+        # m_cache_1 = json.loads(r.get("m_cache_{}_1".format(group_id)).replace("'", '"'))
+        json_data_1 = json.dumps(eval(r.get("m_cache_{}_1".format(group_id))))
+        m_cache_1 = json.loads(json_data_1)
+        logging.debug(m_cache_1)
     if m_cache_0 == m_cache_1 and r.get("do_not_repeat_{}".format(group_id)) == '0':
         if not is_in_cd(group_id, "repeatCD"):
             if random_do(get_config(group_id, "repeatChance")):

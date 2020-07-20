@@ -173,8 +173,8 @@ def mirai_reply_message_chain(target_id, session_key, message, friend=False, tem
             del data_dict["target"]
             data_dict["group"] = temp_group_id
             data_dict["qq"] = target_id
-        final_data = json.dumps(data_dict).replace('\'', '"').strip('"')
-
+        # final_data = json.dumps(data_dict).replace('\'', '"').strip('"')
+        final_data = json.dumps(data_dict)
         if friend:
             message_type = 'FRIEND'
             res = requests.post(url=config.friendMessage_url, data=final_data)
@@ -189,6 +189,7 @@ def mirai_reply_message_chain(target_id, session_key, message, friend=False, tem
         logging.info("[EVENT] reply_message_chain => {m_type}, {target} : messageChain:{msg}".format(target=target_id,
                                                                                                      m_type=message_type,
                                                                                                      msg=message))
+        logging.info("RETURN CODE: {}, MSG_ID: {}".format(r_json.get('code'), r_json.get('messageId')))
         return r_json.get('code'), r_json.get('messageId')
     else:
         return 'error_invalid_parameter'
