@@ -27,10 +27,13 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
                 repeater(group_id, session_key, message_chain)
         if message_type == 'FriendMessage':
             logging.info("[FRIEND] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
+
         if message_type == 'TempMessage':
-            logging.info("[TEMP] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
+            logging.info("[TEMP] [{}] [{}] {},{} => {}".format(group_id, sender_id, message_id, message_time, message_chain))
+
     except Exception as e:
         logging.error(repr(e))
+        logging.error(str(traceback.format_exc()))
     finally:
         r.set('at_moca_{}'.format(group_id), '0')  # 复位atMoca标志
         r.set('group_{}_handling'.format(group_id), '0')
