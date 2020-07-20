@@ -293,7 +293,7 @@ def append_keyword(group_id, key, value):
     else:
         group_keywords[key].append(value)
         new_keywords_json = json.dumps(group_keywords, ensure_ascii=False)
-        r.set('key_{}'.format(group_id),new_keywords_json)
+        r.set('key_{}'.format(group_id), new_keywords_json)
         update_database("KEYWORDS", group_id, new_keywords_json)
         logging.info("[{}] 向 {} 中添加关键词 {}".format(group_id, key, value))
         return True
@@ -656,7 +656,8 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                     mirai_reply_text(group_id, session_key, "不要无限火力不要无限火力，最低5秒cd")
                 else:
                     mirai_reply_text(group_id, session_key,
-                                     "{}当前图片cd：{}秒".format(err_text, update_config(group_id, "replyCD", to_set_cd)))  # 回复新参数
+                                     "{}当前图片cd：{}秒".format(err_text,
+                                                           update_config(group_id, "replyCD", to_set_cd)))  # 回复新参数
                     logging.info("[{}] 设置图片cd {}秒".format(group_id, to_set_cd))
                 r.set("do_not_repeat_{}".format(group_id), '1')
                 return
@@ -674,7 +675,8 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                     mirai_reply_text(group_id, session_key, "错误：最低120秒cd")
                 else:
                     mirai_reply_text(group_id, session_key,
-                                     "{}当前复读cd：{}秒".format(err_text, update_config(group_id, "repeatCD", to_set_cd)))  # 回复新参数
+                                     "{}当前复读cd：{}秒".format(err_text,
+                                                           update_config(group_id, "repeatCD", to_set_cd)))  # 回复新参数
                     logging.info("[{}] 设置复读cd {}秒".format(group_id, to_set_cd))
                 r.set("do_not_repeat_{}".format(group_id), '1')
                 return
@@ -832,3 +834,37 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                     return
 
 
+def mirai_private_message_handler(group_id, session_key, sender_id, message_id, message_time, message_chain):
+    texts = ""
+    for n in range(len(message_chain)):
+        if message_chain[n]["type"] == "Plain":
+            texts += message_chain[n]["text"]
+    if group_id == 0:  # 好友消息
+        if texts[0:4] == '提交图片':
+            # config_data = text[4:len(texts)]
+            # if not config_data == '':
+            #     mirai_reply_text(sender_id, session_key, "请求提交图片：{}".format(config_data), friend=True)
+            # else:
+            #     mirai_reply_text(sender_id, session_key, "参数错误", friend=True)
+            pass
+        else:
+            group_keywords = json.loads(r.get('key_0'))
+            for keys in group_keywords:  # 在字典中遍历查找
+                for e in range(len(group_keywords[keys])):  # 遍历名称
+                    if texts == group_keywords[keys][e]:  # 若命中名称
+                        logging.info("[{}] [FRIEND] 请求：{}".format(group_id, keys))
+                        pic_name = rand_pic(keys)
+                        mirai_reply_image(sender_id, session_key, path='pic\\' + keys + '\\' + pic_name, friend=True)
+                        update_count(0, keys)  # 更新统计次数
+                        return
+    else:  # 临时消息
+        group_keywords = json.loads(r.get('key_{}'.format(group_id)))
+        for keys in group_keywords:  # 在字典中遍历查找
+            for e in range(len(group_keywords[keys])):  # 遍历名称
+                if texts == group_keywords[keys][e]:  # 若命中名称
+                    logging.info("[{}] [{}] [TEMP] 请求：{}".format(group_id, sender_id, keys))
+                    pic_name = rand_pic(keys)
+                    mirai_reply_image(sender_id, session_key, path='pic\\' + keys + '\\' + pic_name, temp=True,
+                                      temp_group_id=group_id)
+                    update_count(group_id, keys)  # 更新统计次数
+                    return

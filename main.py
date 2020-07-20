@@ -25,14 +25,16 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
                 r.set('at_moca_{}'.format(group_id), at_bot)  # 设置atMoca标志
                 mirai_group_message_handler(group_id, session_key, fetch_text(message_chain), sender_permission, sender_id)
                 repeater(group_id, session_key, message_chain)
+
         if message_type == 'FriendMessage':
             logging.info("[FRIEND] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
+            mirai_private_message_handler(0, session_key, sender_id, message_id, message_time, message_chain)
 
         if message_type == 'TempMessage':
             logging.info("[TEMP] [{}] [{}] {},{} => {}".format(group_id, sender_id, message_id, message_time, message_chain))
+            mirai_private_message_handler(group_id, session_key, sender_id, message_id, message_time, message_chain)
 
-    except Exception as e:
-        logging.error(repr(e))
+    except:
         logging.error(str(traceback.format_exc()))
     finally:
         r.set('at_moca_{}'.format(group_id), '0')  # 复位atMoca标志
@@ -44,13 +46,12 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
 
 def on_message(ws, message):  # 接受ws数据
     data = mirai_json_process(3270612406, message)
-    if r.get('group_{}_handling'.format(data[5])) == '0':
+    if r.get('group_{}_handling'.format(data[5])) == '0' or data[0] == 'FriendMessage' or data[0] == 'TempMessage':
         tr = threading.Thread(target=mirai_message_handler, args=data)  # 创建子线程
         tr.start()  # 开始处理
 
 
 def on_error(ws, error):
-    logging.error(repr(error))  # 记录ws错误数据
     logging.error(str(traceback.format_exc()))
 
 
@@ -78,6 +79,7 @@ for g_id in group_list:
 init_files_list()
 init_keaipa_list()
 init_quotation_list()
+init_keyword_list(0)
 
 t = threading.Thread(target=event_process)
 t.setDaemon(True)

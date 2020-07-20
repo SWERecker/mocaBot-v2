@@ -75,7 +75,7 @@ def mirai_init_auth_key():
         return local_auth_key
 
 
-def mirai_reply_text(target_id, session_key, text, friend=False):
+def mirai_reply_text(target_id, session_key, text, friend=False, temp=False, temp_group_id=0):
     """
     功能：回复文字
     参数：{
@@ -88,22 +88,31 @@ def mirai_reply_text(target_id, session_key, text, friend=False):
     if not target_id == '' and not session_key == '' and not text == '':
         data_dict = {'sessionKey': session_key, 'target': target_id,
                      'messageChain': [{'type': 'Plain', 'text': str(text)}]}
+        if temp:
+            del data_dict["target"]
+            data_dict["group"] = temp_group_id
+            data_dict["qq"] = target_id
         final_data = json.dumps(data_dict).replace('\'', '"').strip('"')
-        if not friend:
-            message_type = 'GROUP'
-            res = requests.post(url=config.groupMessage_url, data=final_data)
-        else:
+        if friend:
             message_type = 'FRIEND'
             res = requests.post(url=config.friendMessage_url, data=final_data)
+        elif temp:
+            message_type = 'TEMP'
+            res = requests.post(url=config.tempMessage_url, data=final_data)
+        else:
+            message_type = 'GROUP'
+            res = requests.post(url=config.groupMessage_url, data=final_data)
+
         logging.info("[EVENT] reply_text => {m_type}, {target} : {content}".format(target=target_id, content=text,
                                                                                    m_type=message_type))
+
         r_json = json.loads(res.text)
         return r_json.get('code'), r_json.get('messageId')
     else:
         return 'error_invalid_parameter'
 
 
-def mirai_reply_image(target_id, session_key, path='', image_id='', friend=False):
+def mirai_reply_image(target_id, session_key, path='', image_id='', friend=False, temp=False, temp_group_id=0):
     """
     功能：回复图片
     参数：{
@@ -121,14 +130,21 @@ def mirai_reply_image(target_id, session_key, path='', image_id='', friend=False
             data_dict['messageChain'][0]['imageId'] = image_id
         elif image_id == '':
             data_dict['messageChain'][0]['path'] = path
-
+        if temp:
+            del data_dict["target"]
+            data_dict["group"] = temp_group_id
+            data_dict["qq"] = target_id
         final_data = json.dumps(data_dict).replace('\'', '"').strip('"')
-        if not friend:
-            message_type = 'GROUP'
-            res = requests.post(url=config.groupMessage_url, data=final_data)
-        else:
+        if friend:
             message_type = 'FRIEND'
             res = requests.post(url=config.friendMessage_url, data=final_data)
+        elif temp:
+            message_type = 'TEMP'
+
+            res = requests.post(url=config.tempMessage_url, data=final_data)
+        else:
+            message_type = 'GROUP'
+            res = requests.post(url=config.groupMessage_url, data=final_data)
         logging.info(
             "[EVENT] reply_image => {m_type}, {target} : path={p_path}, imageId={p_id}".format(target=target_id,
                                                                                                p_path=path,
@@ -140,7 +156,7 @@ def mirai_reply_image(target_id, session_key, path='', image_id='', friend=False
         return 'error_invalid_parameter'
 
 
-def mirai_reply_message_chain(target_id, session_key, message, friend=False):
+def mirai_reply_message_chain(target_id, session_key, message, friend=False, temp=False, temp_group_id=0):
     """
     功能：回复messageChain
     参数：{
@@ -153,14 +169,22 @@ def mirai_reply_message_chain(target_id, session_key, message, friend=False):
     """
     if not target_id == '' and not session_key == '':
         data_dict = {"sessionKey": session_key, "target": target_id, "messageChain": message}
-
+        if temp:
+            del data_dict["target"]
+            data_dict["group"] = temp_group_id
+            data_dict["qq"] = target_id
         final_data = json.dumps(data_dict).replace('\'', '"').strip('"')
-        if not friend:
-            res = requests.post(url=config.groupMessage_url, data=final_data)
-            message_type = 'GROUP'
-        else:
-            res = requests.post(url=config.friendMessage_url, data=final_data)
+
+        if friend:
             message_type = 'FRIEND'
+            res = requests.post(url=config.friendMessage_url, data=final_data)
+        elif temp:
+            message_type = 'TEMP'
+            res = requests.post(url=config.tempMessage_url, data=final_data)
+        else:
+            message_type = 'GROUP'
+            res = requests.post(url=config.groupMessage_url, data=final_data)
+
         r_json = json.loads(res.text)
         logging.info("[EVENT] reply_message_chain => {m_type}, {target} : messageChain:{msg}".format(target=target_id,
                                                                                                      m_type=message_type,
