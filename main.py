@@ -5,6 +5,7 @@ import logging
 import redis
 import threading
 import websocket
+import traceback
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s [%(levelname)s] %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S', filename='log.txt', filemode='a')
@@ -47,6 +48,7 @@ def on_message(ws, message):  # 接受ws数据
 
 def on_error(ws, error):
     logging.error(repr(error))  # 记录ws错误数据
+    logging.error(str(traceback.format_exc()))
 
 
 def on_close(ws):

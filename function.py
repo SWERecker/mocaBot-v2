@@ -507,11 +507,14 @@ def rand_pic(key):
 
     """
     global r
-    file_list = json.loads(r.get(key))
+    if r.get(key):
+        file_list = json.loads(r.get(key))
+    else:
+        file_list = []
     random.shuffle(file_list)
     # logging.info("{} => {}".format(key, file_list))
     random_file = random.choice(file_list)
-    logging.info("Chose {}".format(random_file))
+    logging.info("Choose {}".format(random_file))
     return random_file
 
 
@@ -685,7 +688,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                     logging.error("[{}] 设置复读概率 参数错误".format(group_id))
                     to_set_value = 50
                     err_text = '参数有误，请检查格式，当前已重置为50%\n'
-                if 0 < to_set_value < 100:
+                if 0 <= to_set_value <= 100:
                     mirai_reply_text(group_id, session_key,
                                      "{}当前复读概率：{}%".format(err_text, update_config(group_id, "repeatChance",
                                                                                    to_set_value)))  # 回复新参数
