@@ -20,7 +20,7 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
     try:
         if message_type == 'GroupMessage':
             if group_id in group_list:
-                logging.info("[GROUP] [{}] {},{} => {}".format(group_id, message_id, message_time, message_chain))
+                logging.debug("[GROUP] [{}] {},{} => {}".format(group_id, message_id, message_time, message_chain))
                 r.set('group_{}_handling'.format(group_id), '1')
                 r.set('at_moca_{}'.format(group_id), at_bot)  # 设置atMoca标志
                 mirai_group_message_handler(group_id, session_key, fetch_text(message_chain), sender_permission, sender_id)
@@ -57,7 +57,7 @@ def on_error(ws, error):
 
 def on_close(ws):
     r.flushall()
-    logging.info("CLOSING WEBSOCKET")  # 记录ws关闭连接
+    logging.info("Websocket 连接关闭")  # 记录ws关闭连接
     user_input = input("Restart?[y/N]: \n")
     if user_input.lower() == "y":
         os.system('python main.py')

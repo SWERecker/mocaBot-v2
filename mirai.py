@@ -15,16 +15,14 @@ def mirai_auth():
     auth_json = {}
 
     r_auth_json = requests.post(config.auth_url, json.dumps(config.auth_data))
-    # logging.info(r_auth_json.text)
     r_auth_json = json.loads(r_auth_json.text)
     config.verify_data['sessionKey'] = r_auth_json.get('session')
 
     r_verify_json = requests.post(config.verify_url, json.dumps(config.verify_data))
     r_verify_json = json.loads(r_verify_json.text)
-    # logging.info('收到：' + str(r_verify_json))
 
     if r_verify_json.get('code') == 0:
-        logging.info('收到sessionKey:{}, 储存到临时文件, 设置超时时间:25分钟, 将新json写入本地文件'.format(r_auth_json.get('session')))
+        logging.info('收到sessionKey:{}'.format(r_auth_json.get('session')))
         auth_json['auth_key'] = r_auth_json['session']
         time_expire = int(time.time()) + (25 * 60)
         auth_json['expire_time'] = time_expire
@@ -71,7 +69,7 @@ def mirai_init_auth_key():
         logging.info("无本地缓存sessionKey或者sessionKey已超时,更新sessionKey")
         return mirai_auth()
     else:
-        logging.info("本地缓存命中")
+        logging.info("sessionKey缓存命中")
         return local_auth_key
 
 
@@ -103,7 +101,7 @@ def mirai_reply_text(target_id, session_key, text, friend=False, temp=False, tem
             message_type = 'GROUP'
             res = requests.post(url=config.groupMessage_url, data=final_data)
 
-        logging.info("[EVENT] reply_text => {m_type}, {target} : {content}".format(target=target_id, content=text,
+        logging.debug("[EVENT] reply_text => {m_type}, {target} : {content}".format(target=target_id, content=text,
                                                                                    m_type=message_type))
 
         r_json = json.loads(res.text)
@@ -145,7 +143,7 @@ def mirai_reply_image(target_id, session_key, path='', image_id='', friend=False
         else:
             message_type = 'GROUP'
             res = requests.post(url=config.groupMessage_url, data=final_data)
-        logging.info(
+        logging.debug(
             "[EVENT] reply_image => {m_type}, {target} : path={p_path}, imageId={p_id}".format(target=target_id,
                                                                                                p_path=path,
                                                                                                p_id=image_id,
@@ -186,10 +184,10 @@ def mirai_reply_message_chain(target_id, session_key, message, friend=False, tem
             res = requests.post(url=config.groupMessage_url, data=final_data)
 
         r_json = json.loads(res.text)
-        logging.info("[EVENT] reply_message_chain => {m_type}, {target} : messageChain:{msg}".format(target=target_id,
+        logging.debug("[EVENT] reply_message_chain => {m_type}, {target} : messageChain:{msg}".format(target=target_id,
                                                                                                      m_type=message_type,
                                                                                                      msg=message))
-        logging.info("RETURN CODE: {}, MSG_ID: {}".format(r_json.get('code'), r_json.get('messageId')))
+        logging.debug("RETURN CODE: {}, MSG_ID: {}".format(r_json.get('code'), r_json.get('messageId')))
         return r_json.get('code'), r_json.get('messageId')
     else:
         return 'error_invalid_parameter'
