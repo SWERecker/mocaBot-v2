@@ -7,9 +7,12 @@ from mirai import *
 from prettytable import PrettyTable
 from PIL import Image, ImageDraw, ImageFont
 import difflib
+import os
+import traceback
 
 pool = redis.ConnectionPool(host='localhost', port=6379, decode_responses=True)
 r = redis.Redis(connection_pool=pool)
+string = '/\:*<>|"'
 
 
 def update_lp(qq, lp_name):
@@ -576,6 +579,64 @@ def match_lp(lp_name, keyword_list):
         return None
 
 
+def upload_photo(group_id, session_key, text, message_chain):
+    global r
+    if text[0:4] == '提交图片':
+        error_flag = False
+        if len(text) > 4:
+            logging.info("[{}] 提交图片".format(group_id))
+            data_list = []
+            category = text[4:len(text)]
+            for n in category:
+                if n in string:
+                    mirai_reply_text(group_id, session_key, '名称中含有非法字符，请重试')
+                    return
+            for n in range(len(message_chain)):
+                if message_chain[n].get("type") == "Image":
+                    cache_data = {
+                        "url": message_chain[n].get("url"),
+                        "file_name": message_chain[n].get("imageId").split(".")[0].replace("{", "").replace("}", "")
+                    }
+                    logging.info("[{}] 收到：{}".format(group_id, cache_data))
+                    data_list.append(cache_data)
+            if not bool(data_list):
+                mirai_reply_text(group_id, session_key, '没有图片')
+                return
+
+            # upload/{群号}/月/日/{imageId}
+            month = time.strftime("%m")
+            day = time.strftime("%d")
+            if not os.path.exists("upload\\{}\\{}\\{}\\{}".format(group_id, month, day, category)):
+                os.makedirs("upload\\{}\\{}\\{}\\{}".format(group_id, month, day, category))
+
+            for file_index in range(len(data_list)):
+                try:
+                    res = requests.get(data_list[file_index]["url"])
+                    content_type = res.headers.get("Content-Type")
+                    file_type = content_type.split('/')[1]
+                    logging.info("saving {}.{}".format(data_list[file_index]["file_name"], file_type))
+                    logging.info("保存路径：upload\\{}\\{}\\{}\\{}\\{}.{}".format(
+                                 group_id, month, day, category, data_list[file_index]["file_name"], file_type))
+
+                    with open("upload\\{}\\{}\\{}\\{}\\{}.{}".format(
+                            group_id, month, day, category, data_list[file_index]["file_name"], file_type
+                            ), "wb") as image_file:
+                        image_file.write(res.content)
+                except:
+                    logging.error(str(traceback.format_exc()))
+                    error_flag = True
+
+            if error_flag:
+                mirai_reply_text(group_id, session_key, '提交失败')
+            else:
+                file_count = len(data_list)
+                mirai_reply_text(group_id, session_key, '成功，收到{}张图片'.format(file_count))
+        else:
+            mirai_reply_text(group_id, session_key, '参数错误')
+
+        r.set("do_not_repeat_{}".format(group_id), '1')
+
+
 def mirai_group_message_handler(group_id, session_key, text, sender_permission, sender_id):
     """
     功能：群聊消息处理器
@@ -647,7 +708,6 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
             update_count(group_id, '可爱')
             r.set("do_not_repeat_{}".format(group_id), '1')
             return
-
     else:
         group_keywords = json.loads(r.get('key_{}'.format(group_id)))
         quo_keywords = json.loads(r.get('quotation_dict'))

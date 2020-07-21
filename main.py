@@ -23,7 +23,11 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
                 logging.debug("[GROUP] [{}] {},{} => {}".format(group_id, message_id, message_time, message_chain))
                 r.set('group_{}_handling'.format(group_id), '1')
                 r.set('at_moca_{}'.format(group_id), at_bot)  # 设置atMoca标志
-                mirai_group_message_handler(group_id, session_key, fetch_text(message_chain), sender_permission, sender_id)
+                text = fetch_text(message_chain)
+                if at_bot == '1':
+                    upload_photo(group_id, session_key, text, message_chain)
+                mirai_group_message_handler(group_id,
+                                            session_key, text, sender_permission, sender_id)
                 repeater(group_id, session_key, message_chain)
 
         if message_type == 'FriendMessage':
