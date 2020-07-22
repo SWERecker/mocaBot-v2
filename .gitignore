@@ -129,3 +129,4 @@ auth.json
 test.py
 group.list
 upload/
+cache/

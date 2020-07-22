@@ -80,10 +80,11 @@ for g_id in group_list:
     init_keyword_list(g_id)
     r.set('group_{}_handling'.format(g_id), '0')
     r.set("do_not_repeat_{}".format(g_id), '0')
+init_keyword_list(0)
 init_files_list()
 init_keaipa_list()
 init_quotation_list()
-init_keyword_list(0)
+
 
 t = threading.Thread(target=event_process)
 t.setDaemon(True)
