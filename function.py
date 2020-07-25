@@ -801,7 +801,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                         logging.info("[{}] 请求：{}".format(group_id, name))
                         quo_words = r.hget("QUOTATION", name).split(',')
                         random_num = random.randint(0, len(quo_words) - 1)
-                        mirai_reply_text(group_id, session_key, quo_words[random_num])
+                        mirai_reply_text(group_id, session_key, quo_words[random_num].strip())
                         update_count(group_id, name)  # 更新统计次数
                         rc.hset(group_id, "do_not_repeat", '1')
                     rc.hset(group_id, "do_not_repeat", '1')
