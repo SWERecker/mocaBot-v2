@@ -78,16 +78,21 @@ def on_open(ws):  # 打开ws时
 
 
 def event_process():
-    os.system('python event.py')
+    # os.system('python event.py')
+    pass
 
 
 load_group_list()
 init_files_list()
 init_keaipa_list()
 
-t = threading.Thread(target=event_process)
-t.setDaemon(True)
-t.start()
+# t = threading.Thread(target=event_process)
+# t.setDaemon(True)
+# t.start()
+
+for g_id in fetch_group_list():
+    init_keyword_list(int(g_id))
+    init_config(int(g_id))
 
 # websocket.enableTrace(True)    #Websocket调试模式
 ws = websocket.WebSocketApp(

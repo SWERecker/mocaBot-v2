@@ -143,6 +143,22 @@ def init_keyword_list(group_id):
     """
     if not r.hexists("KEYWORDS", group_id):
         r.hset("KEYWORDS", group_id, r.hget("KEYWORDS", "key_template"))
+        logging.info("[{}] 初始化关键词列表".format(group_id))
+        return True
+    else:
+        return False
+
+
+def init_config(group_id):
+    """
+    功能：若不存在初始化参数
+    参数：{
+        group_id : QQ群号
+    }
+    返回：True,False(已存在)
+    """
+    if not r.hexists("CONFIG", group_id):
+        r.hset("CONFIG", group_id, r.hget("CONFIG", "config_template"))
         return True
     else:
         return False
@@ -165,7 +181,7 @@ def fetch_group_list():
     """
     功能：获取群列表
     参数：{}
-    返回：True
+    返回：群列表(集合)
     """
     return rc.smembers("GROUPS")
 
@@ -195,6 +211,9 @@ def fetch_config(group_id, arg):
     }
     返回：参数值
     """
+    if not r.hexists("CONFIG", group_id):
+        r.hset("CONFIG", group_id, r.hget("CONFIG", "config_template"))
+        logging.info("[{}] 初始化参数".format(group_id))
     config_json = r.hget("CONFIG", group_id)
     config_data = json.loads(config_json)
     logging.debug("[{}] 获取CONFIG {} = {}".format(group_id, arg, config_data.get(arg)))
@@ -203,7 +222,7 @@ def fetch_config(group_id, arg):
 
 def update_config(group_id, arg, value):
     """
-    功能：向SQLite中更新某参数
+    功能：向Redis中更新某参数
     参数：{
         group_id : QQ群号,
         arg      : 参数名称,
@@ -416,6 +435,8 @@ def update_count(group_id, name):
     }
     返回：True
     """
+    if not r.hexists("COUNT", group_id):
+        r.hset("COUNT", group_id, "{}")
     count_list = json.loads(r.hget("COUNT", group_id))
     if not count_list.get(name):
         count_list[name] = 1
@@ -425,6 +446,25 @@ def update_count(group_id, name):
         logging.info("[{}] {} COUNT + 1".format(group_id, name))
     r.hset("COUNT", group_id, json.dumps(count_list, ensure_ascii=False))
     return True
+
+
+def fetch_count_list(group_id):
+    """
+    功能：从图片库中随机抽取一张
+    参数：{
+        name : 名称
+    }
+    返回：图片文件名（名称不存在时返回False）
+    """
+    group_keyword = json.loads(r.hget("KEYWORDS", group_id))
+    file_list = rc.hgetall("FILES")
+    result_list = {}
+    for name in group_keyword:
+        if name in file_list:
+            json_data = json.loads(file_list[name])
+            result_list[name] = len(json_data)
+    return result_list
+
 
 
 def rand_pic(name):
@@ -574,6 +614,18 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
             rc.hset(group_id, "do_not_repeat", '1')
             return
 
+        if "图片数量" in text:
+            if not is_in_cd(group_id, "replyHelpCD"):
+                logging.info("[{}] 请求统计图片数量".format(group_id))
+                json_data = fetch_count_list(group_id)
+                create_dict_pic(json_data, str(group_id) + '_piccount', '图片数量')  # 将json转换为图片
+                mirai_reply_image(group_id, session_key, str(group_id) + "_piccount.png")  # 发送图片
+                update_cd(group_id, "replyHelpCD")
+            else:
+                logging.debug("[{}] 统计次数cd冷却中".format(group_id))
+            rc.hset(group_id, "do_not_repeat", '1')
+            return
+
         if "爬" in text or "爪巴" in text:
             if not is_in_cd(group_id, "keaiPaCD"):
                 if random_do(fetch_config(group_id, "keaiPaChance")):
@@ -604,6 +656,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
             rc.hset(group_id, "do_not_repeat", '1')
             return
     else:
+        init_keyword_list(group_id)
         group_keywords = json.loads(r.hget("KEYWORDS", group_id))
         quo_data = r.hgetall('QUOTATION_LIST')
         for name in quo_data:

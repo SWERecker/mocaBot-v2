@@ -1,12 +1,14 @@
 import json
 import os
 from mirai import *
-from function import load_group_list
+from function import fetch_group_list
 import time
-import sqlite3
 import config
+import redis
 
 session_key = mirai_init_auth_key()
+pool = redis.ConnectionPool(host='localhost', port=6379, db=0, decode_responses=True)
+r = redis.Redis(connection_pool=pool)
 
 
 def compare_change(group_id):
@@ -18,9 +20,7 @@ def compare_change(group_id):
         file_list = os.listdir(config.mirai_path + "\\plugins\\MiraiAPIHTTP\\images\\pic\\" + name + "\\")
         latest_file_count[name] = len(file_list)
     result_json = {}
-    cursor = conn_cursor.execute("SELECT CONTENT FROM KEYWORDS WHERE NAME='{}'".format(group_id))
-    data_list = list(cursor)
-    group_keyword = json.loads(data_list[0][0])
+    group_keyword = json.loads(r.hget("KEYWORDS", group_id))
     if not os.path.exists("cache"):
         os.makedirs("cache")
     if os.path.isfile("cache\\{}.cache".format(group_id)):
@@ -59,9 +59,6 @@ def compare_change(group_id):
             cache_file.write(json.dumps(latest_group_count, ensure_ascii=False))
 
 
-conn = sqlite3.connect('mocabot.sqlite3')
-conn_cursor = conn.cursor()
-g_list = load_group_list()
+g_list = fetch_group_list()
 for g_id in g_list:
-    compare_change(g_id)
-conn.close()
+    compare_change(int(g_id))
