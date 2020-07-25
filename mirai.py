@@ -77,9 +77,13 @@ def mirai_reply_text(target_id, session_key, text, friend=False, temp=False, tem
     """
     功能：回复文字
     参数：{
-        target_id    :  群号/QQ号,
-        session_key  :  sessionKey,
-        text         :  文字（string）
+        target_id       :  群号/QQ号,
+        session_key     :  sessionKey,
+        text            :  文字（string）,
+        friend=False,   :  是否为好友消息,
+        temp=False,     :  是否为临时消息,
+        temp_group_id=0 :  临时消息群号
+
     }
     返回：，参数错误时返回"error_invalid_parameter"
     """

@@ -17,3 +17,5 @@ ws_addr = 'ws://{}:{}/message?sessionKey='.format(server_name, server_port)
 
 # Mirai
 mirai_path = 'C:\\mirai'
+
+superman = 565379987
