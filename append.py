@@ -8,6 +8,10 @@ new_dict = {"生田輝": [
 ]}
 
 group_list = load_group_list()
+template_keyword = json.loads(r.hget("KEYWORDS", "key_template"))
+template_keyword.update(new_dict)
+r.hset("KEYWORDS", "key_template", json.dumps(template_keyword, ensure_ascii=False))
+
 for g_id in group_list:
     print("updating {}".format(g_id))
     group_keyword = json.loads(r.hget("KEYWORDS", g_id))
