@@ -430,7 +430,7 @@ def update_count(group_id, name):
     """
     功能：更新次数（+1）
     参数：{
-        group_id    : QQ群号,
+        group_id : QQ群号,
         name     : 要+1的名称
     }
     返回：True
@@ -450,9 +450,9 @@ def update_count(group_id, name):
 
 def fetch_count_list(group_id):
     """
-    功能：从图片库中随机抽取一张
+    功能：获取图片数量列表
     参数：{
-        name : 名称
+        group_id : 群号
     }
     返回：图片文件名（名称不存在时返回False）
     """
@@ -466,7 +466,6 @@ def fetch_count_list(group_id):
     return result_list
 
 
-
 def rand_pic(name):
     """
     功能：从图片库中随机抽取一张
@@ -476,7 +475,7 @@ def rand_pic(name):
     返回：图片文件名（名称不存在时返回False）
     """
     if not rc.hexists("FILES", name):
-        return False
+        return None
     file_list = json.loads(rc.hget("FILES", name))
     random.shuffle(file_list)
     random_file = random.choice(file_list)
@@ -856,7 +855,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                         random_num = random.randint(0, len(quo_words) - 1)
                         mirai_reply_text(group_id, session_key, quo_words[random_num].strip())
                         update_count(group_id, name)  # 更新统计次数
-                        rc.hset(group_id, "do_not_repeat", '1')
+
                     rc.hset(group_id, "do_not_repeat", '1')
                     return
 

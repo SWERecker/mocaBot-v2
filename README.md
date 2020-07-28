@@ -1,4 +1,7 @@
 # mocaBot-v2
- a re-written mocaBot based on [mirai](https://github.com/mamoe/mirai)
+ a QQ BOT based on [mirai](https://github.com/mamoe/mirai) and Python
 
-## This project is under development
+## This project is under development 
+
+## [Wiki](https://wiki.bang-dream.tech/)
+
