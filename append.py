@@ -7,7 +7,7 @@ new_dict = {"生田輝": [
     "来点teru"
 ]}
 
-group_list = load_group_list()
+group_list = fetch_group_list()
 template_keyword = json.loads(r.hget("KEYWORDS", "key_template"))
 template_keyword.update(new_dict)
 r.hset("KEYWORDS", "key_template", json.dumps(template_keyword, ensure_ascii=False))
