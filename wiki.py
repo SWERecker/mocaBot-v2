@@ -3,7 +3,8 @@ import config
 import time
 import os
 import redis
-file_path = 'C:\\wwwroot\\moca.swenetech.xyz'
+
+file_path = 'C:\\wwwroot\\mocabot.cn'
 new_data = {'updateTime': str(time.strftime('%Y-%m-%d %H:%M',time.localtime(time.time())))}
 
 names_list = os.listdir(config.mirai_path + '\\plugins\\MiraiAPIHTTP\\images\\pic\\')
@@ -29,8 +30,8 @@ for d in data:
 
 new_data['rCount'] = count
 
-with open(file_path + '\\data.json','w',encoding='utf-8')as data_file:
+with open(file_path + '\\data.json', 'w', encoding='utf-8')as data_file:
     data_file.write(json.dumps(new_data, ensure_ascii=False))
-with open(file_path + '\\data_history.json','a',encoding='utf-8')as data_file:
+with open(file_path + '\\data_history.json', 'a', encoding='utf-8')as data_file:
+    data_file.write(json.dumps(new_data, ensure_ascii=False))
     data_file.write("\n")
-    data_file.write(json.dumps(new_data, ensure_ascii=False))
