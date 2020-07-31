@@ -14,7 +14,7 @@ r = redis.Redis(connection_pool=pool)
 cache_pool = redis.ConnectionPool(host='localhost', port=6379, db=1, decode_responses=True)
 rc = redis.Redis(connection_pool=cache_pool)
 string = '/\:*<>|"'
-url = 'http://127.0.0.1:8088/random_song'
+url = 'http://120.79.166.168:8088/random_song'
 dictionary = {
     'band': {
         'ro': 'Roselia',
@@ -608,8 +608,9 @@ def rdm_song(text):
             para["type"] = t[2:].split(',')
         if t[:2] == '比赛':
             para["c_type"] = True
-    res = requests.post(url, json=para)
-    result = json.loads(res.text)
+    print(para)
+    r = requests.post(url, json=para)
+    result = json.loads(r.text)
     result_name = result.get('name')
     result_band = dictionary['band'].get(result.get('band'))
     result_type = dictionary['type'].get(result.get('type'))
@@ -617,10 +618,14 @@ def rdm_song(text):
     if result.get("msg") == "error":
         if result.get("type") == "band":
             return "错误: 乐队条件错误\n支持: ppp, ro, ag, hhw, pp, other"
-        if result.get("type") == "type":
+        elif result.get("type") == "type":
             return "错误: 歌曲类型条件错误\n支持：ex, sp, full"
-        if result.get("diff") == "type":
-            return "错误: 难度条件错误\n支持：24~29"
+        elif result.get("type") == "diff":
+            return "错误: 难度条件错误\n支持：24~28"
+        elif result.get("type") == "result":
+            return "错误: 该条件下无歌曲可以选择"
+        else:
+            return "错误：{}".format(result.get("type"))
     return "选歌结果：\n{} — {}\n{} {}".format(result_name, result_band, result_type, result_diff)
     
 
