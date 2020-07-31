@@ -17,4 +17,3 @@ for g_id in group_list:
     group_keyword = json.loads(r.hget("KEYWORDS", g_id))
     group_keyword.update(new_dict)
     r.hset("KEYWORDS", g_id, json.dumps(group_keyword, ensure_ascii=False))
-    

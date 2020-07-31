@@ -31,24 +31,20 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
                 text = fetch_text(message_chain)
                 if text[:4] == '随机选歌':
                     mirai_reply_text(group_id, session_key, rdm_song(text))
-                if at_bot == '1':
-                    upload_photo(group_id, session_key, text, message_chain)
+                    rc.hset(group_id, "do_not_repeat", '1')
                 mirai_group_message_handler(group_id,
-                                            session_key, text, sender_permission, sender_id)
+                                            session_key, text, sender_permission, sender_id, message_chain)
                 if not rc.hget(group_id, "do_not_repeat") == '1':
                     repeater(group_id, session_key, message_chain)
 
         if message_type == 'FriendMessage':
             logging.debug("[FRIEND] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
-            text = fetch_text(message_chain)
-            if text[:4] == '随机选歌':
-                mirai_reply_text(sender_id, session_key, rdm_song(text), friend=True)
+            mirai_private_message_handler(group_id, session_key, sender_id, message_id, message_time, message_chain)
+
         if message_type == 'TempMessage':
             logging.debug(
                 "[TEMP] [{}] [{}] {},{} => {}".format(group_id, sender_id, message_id, message_time, message_chain))
-            text = fetch_text(message_chain)
-            if text[:4] == '随机选歌':
-                mirai_reply_text(sender_id, session_key, rdm_song(text), temp=True, temp_group_id=group_id)
+            mirai_private_message_handler(group_id, session_key, sender_id, message_id, message_time, message_chain)
 
     except:
         logging.error(str(traceback.format_exc()))
