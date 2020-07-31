@@ -617,7 +617,7 @@ def rdm_song(text):
     result_diff = result.get('diff')
     if result.get("msg") == "error":
         if result.get("type") == "band":
-            return "错误: 乐队条件错误\n支持: ppp, ro, ag, hhw, pp, other"
+            return "错误: 乐队条件错误\n支持: ppp, ro, ag, hhw, pp, mo, ras, other"
         elif result.get("type") == "type":
             return "错误: 歌曲类型条件错误\n支持：ex, sp, full"
         elif result.get("type") == "diff":
