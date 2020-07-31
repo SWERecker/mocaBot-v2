@@ -635,9 +635,12 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
             return
 
         if "lp排行" in text:
-            result = lp_list_rank()
-            create_dict_pic(result, str(group_id) + '_lprank', '前十人数')
-            mirai_reply_image(group_id, session_key, str(group_id) + "_lprank.png")  # 发送图片
+            if not is_in_cd(group_id, "replyHelpCD"):
+                result = lp_list_rank()
+                create_dict_pic(result, str(group_id) + '_lprank', '前十人数')
+                mirai_reply_image(group_id, session_key, str(group_id) + "_lprank.png")  # 发送图片
+                update_cd(group_id, "replyHelpCD")
+            rc.hset(group_id, "do_not_repeat", '1')
             return
 
         if "图片数量" in text:
