@@ -14,6 +14,34 @@ r = redis.Redis(connection_pool=pool)
 cache_pool = redis.ConnectionPool(host='localhost', port=6379, db=1, decode_responses=True)
 rc = redis.Redis(connection_pool=cache_pool)
 string = '/\:*<>|"'
+url = 'http://127.0.0.1:8088/random_song'
+dictionary = {
+    'band': {
+        'ro': 'Roselia',
+        'ppp': 'Poppin‘Party',
+        'pp': 'Pastel*Palettes',
+        'ag': 'Afterglow',
+        'hhw': 'Hello, Happy World',
+        'ras': 'RAISE A SUILEN',
+        'mo': 'Morfonica',
+        'rimi': '牛込りみ',
+        'saaya': '山吹沙綾',
+        'arisa': '市ヶ谷有咲',
+        'otae': 'GBP！スペシャルバンド',
+        'ayaxmocaxlisaxkanonxtsugu': '彩×モカ×リサ×花音×つぐみ',
+        'pppxykn': 'Poppin‘Party×友希那',
+        'ksmxranxayaxyknxkkr': '香澄×蘭×彩×友希那×こころ',
+        'hhwxranxaya': 'ハロハピ×蘭×彩',
+        'roxran': 'Roselia×蘭',
+        'agxkkr': 'Afterglow×こころ',
+        'pppxgg': 'Poppin‘Party × Glitter*Green',
+    },
+    'type': {
+        'ex': 'EXPERT',
+        'sp': 'SPECIAL',
+        'full': 'FULL'
+    }
+}
 
 
 def update_lp(qq, lp_name):
@@ -567,6 +595,35 @@ def upload_photo(group_id, session_key, text, message_chain):
         rc.hset(group_id, "do_not_repeat", '1')
 
 
+def rdm_song(text):
+    l_text = text.lower().replace("；", ";").replace("，", ",").replace(" ", "")
+    para = {}
+    paras = l_text[4:].split(';')
+    for t in paras:
+        if t[:2] == '乐队':
+            para["band"] = t[2:].split(',')
+        if t[:2] == '难度':
+            para["diff"] = t[2:].split(',')
+        if t[:2] == '类型':
+            para["type"] = t[2:].split(',')
+        if t[:2] == '比赛':
+            para["c_type"] = True
+    res = requests.post(url, json=para)
+    result = json.loads(res.text)
+    result_name = result.get('name')
+    result_band = dictionary['band'].get(result.get('band'))
+    result_type = dictionary['type'].get(result.get('type'))
+    result_diff = result.get('diff')
+    if result.get("msg") == "error":
+        if result.get("type") == "band":
+            return "错误: 乐队条件错误\n支持: ppp, ro, ag, hhw, pp, other"
+        if result.get("type") == "type":
+            return "错误: 歌曲类型条件错误\n支持：ex, sp, full"
+        if result.get("diff") == "type":
+            return "错误: 难度条件错误\n支持：24~29"
+    return "选歌结果：\n{} — {}\n{} {}".format(result_name, result_band, result_type, result_diff)
+    
+
 # noinspection PyBroadException
 def mirai_group_message_handler(group_id, session_key, text, sender_permission, sender_id):
     """
@@ -578,7 +635,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
         sender_permission : 发消息的人的权限,
         sender_id         : 发消息的人的QQ号
     }
-    返回：True/False
+    返回：
     """
     if rc.hget(group_id, 'at_moca'.format(group_id)) == '1':
         if '说明' in text or 'help' in text or '帮助' in text:

@@ -29,6 +29,8 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
                 logging.debug("[GROUP] [{}] {},{} => {}".format(group_id, message_id, message_time, message_chain))
                 rc.hset(group_id, 'at_moca', at_bot)  # 设置atMoca标志
                 text = fetch_text(message_chain)
+                if text[:4] == '随机选歌':
+                    mirai_reply_text(group_id, session_key, rdm_song(text))
                 if at_bot == '1':
                     upload_photo(group_id, session_key, text, message_chain)
                 mirai_group_message_handler(group_id,
@@ -37,14 +39,16 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
                     repeater(group_id, session_key, message_chain)
 
         if message_type == 'FriendMessage':
-            logging.info("[FRIEND] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
-            # mirai_private_message_handler(0, session_key, sender_id, message_id, message_time, message_chain)
-            mirai_reply_text(sender_id, session_key, "由于核心限制，目前暂不开放私聊功能。", friend=True)
+            logging.debug("[FRIEND] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
+            text = fetch_text(message_chain)
+            if text[:4] == '随机选歌':
+                mirai_reply_text(sender_id, session_key, rdm_song(text), friend=True)
         if message_type == 'TempMessage':
-            logging.info(
+            logging.debug(
                 "[TEMP] [{}] [{}] {},{} => {}".format(group_id, sender_id, message_id, message_time, message_chain))
-            # mirai_private_message_handler(group_id, session_key, sender_id, message_id, message_time, message_chain)
-            mirai_reply_text(sender_id, session_key, "由于核心限制，目前暂不开放临时消息功能。", temp=True, temp_group_id=group_id)
+            text = fetch_text(message_chain)
+            if text[:4] == '随机选歌':
+                mirai_reply_text(sender_id, session_key, rdm_song(text), temp=True, temp_group_id=group_id)
 
     except:
         logging.error(str(traceback.format_exc()))
