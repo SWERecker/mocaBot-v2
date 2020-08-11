@@ -94,7 +94,7 @@ def mirai_reply_text(target_id, session_key, text, friend=False, temp=False, tem
             del data_dict["target"]
             data_dict["group"] = temp_group_id
             data_dict["qq"] = target_id
-        final_data = json.dumps(data_dict).replace('\'', '"').strip('"')
+        final_data = json.dumps(data_dict)
         if friend:
             message_type = 'FRIEND'
             res = requests.post(url=config.friendMessage_url, data=final_data)
