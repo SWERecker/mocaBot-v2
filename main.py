@@ -24,18 +24,16 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
     global handling_flag
     try:
         if message_type == 'GroupMessage':
-            group_list = fetch_group_list()
-            if str(group_id) in group_list:
-                logging.debug("[GROUP] [{}] {},{} => {}".format(group_id, message_id, message_time, message_chain))
-                rc.hset(group_id, 'at_moca', at_bot)  # 设置atMoca标志
-                text = fetch_text(message_chain)
-                if text[:4] == '随机选歌':
-                    mirai_reply_text(group_id, session_key, rdm_song(text))
-                    rc.hset(group_id, "do_not_repeat", '1')
-                mirai_group_message_handler(group_id,
-                                            session_key, text, sender_permission, sender_id, message_chain)
-                if not rc.hget(group_id, "do_not_repeat") == '1':
-                    repeater(group_id, session_key, message_chain)
+            logging.debug("[GROUP] [{}] {},{} => {}".format(group_id, message_id, message_time, message_chain))
+            rc.hset(group_id, 'at_moca', at_bot)  # 设置atMoca标志
+            text = fetch_text(message_chain)
+            if text[:4] == '随机选歌':
+                mirai_reply_text(group_id, session_key, rdm_song(text))
+                rc.hset(group_id, "do_not_repeat", '1')
+            mirai_group_message_handler(group_id,
+                                        session_key, text, sender_permission, sender_id, message_chain)
+            if not rc.hget(group_id, "do_not_repeat") == '1':
+                repeater(group_id, session_key, message_chain)
 
         if message_type == 'FriendMessage':
             logging.debug("[FRIEND] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
