@@ -14,32 +14,38 @@ r = redis.Redis(connection_pool=pool)
 cache_pool = redis.ConnectionPool(host='localhost', port=6379, db=1, decode_responses=True)
 rc = redis.Redis(connection_pool=cache_pool)
 string = '/\:*<>|"'
-url = 'http://120.79.166.168:8088/random_song'
+url = 'http://api.mocabot.xyz/api'
 dictionary = {
-    'band': {
-        'ro': 'Roselia',
-        'ppp': 'Poppin‘Party',
-        'pp': 'Pastel*Palettes',
-        'ag': 'Afterglow',
-        'hhw': 'Hello, Happy World',
-        'ras': 'RAISE A SUILEN',
-        'mo': 'Morfonica',
-        'rimi': '牛込りみ',
-        'saaya': '山吹沙綾',
-        'arisa': '市ヶ谷有咲',
-        'otae': 'GBP！スペシャルバンド',
-        'ayaxmocaxlisaxkanonxtsugu': '彩×モカ×リサ×花音×つぐみ',
-        'pppxykn': 'Poppin‘Party×友希那',
-        'ksmxranxayaxyknxkkr': '香澄×蘭×彩×友希那×こころ',
-        'hhwxranxaya': 'ハロハピ×蘭×彩',
-        'roxran': 'Roselia×蘭',
-        'agxkkr': 'Afterglow×こころ',
-        'pppxgg': 'Poppin‘Party × Glitter*Green',
+    "band": {
+        "ro": "Roselia",
+        "ppp": "Poppin'Party",
+        "pp": "Pastel*Palettes",
+        "ag": "Afterglow",
+        "hhw": "Hello, Happy World",
+        "ras": "RAISE A SUILEN",
+        "mo": "Morfonica",
+        "rimi": "牛込りみ",
+        "saaya": "山吹沙綾",
+        "arisa": "市ヶ谷有咲",
+        "otae": "花園たえ",
+        "ayaxmocaxlisaxkanonxtsugu": "彩×モカ×リサ×花音×つぐみ",
+        "pppxykn": "Poppin'Party×友希那",
+        "ksmxranxayaxyknxkkr": "香澄×蘭×彩×友希那×こころ",
+        "hhwxranxaya": "ハロハピ×蘭×彩",
+        "roxran": "Roselia×蘭",
+        "agxkkr": "Afterglow×こころ",
+        "pppxgg": "Poppin‘Party × Glitter*Green",
+        "ksmxag": "香澄×Afterglow",
+        "pppxayaxkkr": "Poppin'Party×彩×こころ"
     },
-    'type': {
-        'ex': 'EXPERT',
-        'sp': 'SPECIAL',
-        'full': 'FULL'
+    "level": {
+        "ex": "EXPERT",
+        "sp": "SPECIAL",
+        "full": "FULL"
+    },
+    "type": {
+        "og": "原创",
+        "co": "翻唱"
     }
 }
 
@@ -564,36 +570,31 @@ def match_lp(lp_name, keyword_list):
 
 def rdm_song(text):
     l_text = text.lower().replace("；", ";").replace("，", ",").replace(" ", "")
-    para = {}
+    para = {"mode": "random"}
     paras = l_text[4:].split(';')
     for t in paras:
         if t[:2] == '乐队':
-            para["band"] = t[2:].split(',')
+            para["band"] = t[2:]
         if t[:2] == '难度':
-            para["diff"] = t[2:].split(',')
+            para["diff"] = t[2:]
         if t[:2] == '类型':
-            para["type"] = t[2:].split(',')
+            para["level"] = t[2:]
         if t[:2] == '比赛':
-            para["c_type"] = True
-    print(para)
-    r = requests.post(url, json=para)
-    result = json.loads(r.text)
-    result_name = result.get('name')
-    result_band = dictionary['band'].get(result.get('band'))
-    result_type = dictionary['type'].get(result.get('type'))
-    result_diff = result.get('diff')
+            para["data"] = 'comp'
+    logging.info(para)
+    res = requests.get(url, params=para)
+    logging.info(res.url)
+    logging.info("result: " + res.text)
+    result = json.loads(res.text)
     if result.get("msg") == "error":
-        if result.get("type") == "band":
-            return "错误: 乐队条件错误\n支持: ppp, ro, ag, hhw, pp, mo, ras, other"
-        elif result.get("type") == "type":
-            return "错误: 歌曲类型条件错误\n支持：ex, sp, full"
-        elif result.get("type") == "diff":
-            return "错误: 难度条件错误\n支持：24~28"
-        elif result.get("type") == "result":
-            return "错误: 该条件下无歌曲可以选择"
-        else:
-            return "错误：{}".format(result.get("type"))
-    return "选歌结果：\n{} — {}\n{} {}".format(result_name, result_band, result_type, result_diff)
+        return "筛选条件有误，请检查"
+    result_song = result.get('result')[0]
+    result_name = result_song.get('name')
+    result_band = dictionary['band'].get(result_song.get('band'))
+    result_level = dictionary['level'].get(result_song.get('level'))
+    result_diff = result_song.get('diff')
+    result_type = dictionary['type'].get(result_song.get('type'))
+    return "选歌结果：\n{} - {}\n{} {}  {}曲".format(result_name, result_band, result_level, result_diff, result_type)
 
 
 # noinspection PyBroadException
@@ -879,7 +880,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
         if "来点wlp" in text or "来点lp" in text or "来点老婆" in text or "来点我老婆" in text:
             lp_name = fetch_lp(sender_id)
             if sender_id == config.superman:
-                for _ in range(3):
+                for _ in range(2):
                     pic_name = rand_pic(lp_name)
                     mirai_reply_image(group_id, session_key, path='pic\\' + lp_name + '\\' + pic_name)
                     update_count(group_id, lp_name)  # 更新统计次数
