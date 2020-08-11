@@ -570,7 +570,8 @@ def match_lp(lp_name, keyword_list):
 
 def rdm_song(text):
     l_text = text.lower().replace("；", ";").replace("，", ",").replace(" ", "")
-    para = {"mode": "random"}
+    timestamp = int(round(time.time() * 1000))
+    para = {"mode": "random", "time": timestamp}
     paras = l_text[4:].split(';')
     for t in paras:
         if t[:2] == '乐队':
