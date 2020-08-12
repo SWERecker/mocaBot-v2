@@ -18,8 +18,9 @@ def compare_change(group_id):
     result_text = str(time.strftime('%Y-%m-%d %H:%M',time.localtime(time.time()))) + " 图片数量变化\n"
     names_list = os.listdir(config.mirai_path + "\\plugins\\MiraiAPIHTTP\\images\\pic\\")
     for name in names_list:
-        file_list = os.listdir(config.mirai_path + "\\plugins\\MiraiAPIHTTP\\images\\pic\\" + name + "\\")
-        latest_file_count[name] = len(file_list)
+        if os.path.isdir(config.mirai_path + "\\plugins\\MiraiAPIHTTP\\images\\pic\\" + name):
+            file_list = os.listdir(config.mirai_path + "\\plugins\\MiraiAPIHTTP\\images\\pic\\" + name + "\\")
+            latest_file_count[name] = len(file_list)
     result_json = {}
     group_keyword = json.loads(r.hget("KEYWORDS", group_id))
     if not os.path.exists("cache"):

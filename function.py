@@ -228,9 +228,10 @@ def init_files_list():
     """
     names_list = os.listdir(config.mirai_path + "\\plugins\\MiraiAPIHTTP\\images\\pic\\")
     for name in names_list:
-        file_list = os.listdir(config.mirai_path + "\\plugins\\MiraiAPIHTTP\\images\\pic\\" + name + "\\")
-        rc.hset("FILES", name, json.dumps(file_list, ensure_ascii=False))
-        logging.debug("saving {} to redis, data : {}".format(name, file_list))
+        if os.path.isdir(config.mirai_path + "\\plugins\\MiraiAPIHTTP\\images\\pic\\" + name):
+            file_list = os.listdir(config.mirai_path + "\\plugins\\MiraiAPIHTTP\\images\\pic\\" + name + "\\")
+            rc.hset("FILES", name, json.dumps(file_list, ensure_ascii=False))
+            logging.debug("saving {} to redis, data : {}".format(name, file_list))
     logging.info('重建图片索引完成')
     rc.set('file_list_init', '1', ex=600)
     return True
