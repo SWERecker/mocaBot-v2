@@ -6,8 +6,14 @@ import threading
 import websocket
 import traceback
 
+log_filename = "log/" + str(time.strftime('LOG-%Y-%m-%d',time.localtime(time.time()))) + ".txt"
+if not os.path.exists("log"):
+    os.mkdir("log")
+if not os.path.isfile(log_filename):
+    open(log_filename, "w").close()
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s',
-                    datefmt='%a, %d %b %Y %H:%M:%S', filename='log.txt', filemode='a')
+                    datefmt='%a, %d %b %Y %H:%M:%S', filename=log_filename, filemode='a')
 
 session_key = mirai_init_auth_key()
 pool = redis.ConnectionPool(host='localhost', port=6379, db=0, decode_responses=True)
