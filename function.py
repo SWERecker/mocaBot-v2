@@ -611,7 +611,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
     }
     返回：
     """
-    if rc.hget(group_id, 'at_moca'.format(group_id)) == '1':
+    if rc.hget(group_id, 'at_moca') == '1':
         if '关键词' in text:
             if not is_in_cd(group_id, "replyHelpCD"):
                 logging.info("[{}] 请求关键词列表".format(group_id))
@@ -687,12 +687,12 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
             rc.hset(group_id, "do_not_repeat", '1')
             return
 
-        if text[0:4] == '提交图片':
+        if text[:4] == '提交图片':
             error_flag = False
             if len(text) > 4:
                 logging.info("[{}] 提交图片".format(group_id))
                 data_list = []
-                category = text[4:len(text)]
+                category = text[4:]
                 for n in category:
                     if n in string:
                         mirai_reply_text(group_id, session_key, '名称中含有非法字符，请重试')
@@ -751,9 +751,9 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                 quo_data[name].append(key)
 
         if sender_permission == 'ADMINISTRATOR' or sender_permission == 'OWNER' or sender_id == config.superman:
-            if text[0:6] == "设置图片cd":  # 设置图片cd
+            if text[:6] == "设置图片cd":  # 设置图片cd
                 try:
-                    arg = str(text[6:len(text)])
+                    arg = str(text[6:])
                     to_set_cd = int(arg.rstrip("秒"))  # 获取参数
                     err_text = ''
                 except:
@@ -770,9 +770,9 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                 rc.hset(group_id, "do_not_repeat", '1')
                 return
 
-            if text[0:6] == "设置复读cd":  # 设置复读cd
+            if text[:6] == "设置复读cd":  # 设置复读cd
                 try:
-                    arg = str(text[6:len(text)])
+                    arg = str(text[6:])
                     to_set_cd = int(arg.rstrip("秒"))  # 获取参数
                     err_text = ''
                 except:
@@ -789,9 +789,9 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                 rc.hset(group_id, "do_not_repeat", '1')
                 return
 
-            if text[0:6] == "设置复读概率":  # 设置复读概率
+            if text[:6] == "设置复读概率":  # 设置复读概率
                 try:
-                    arg = str(text[6:len(text)])
+                    arg = str(text[6:])
                     to_set_value = int(arg.rstrip("%"))  # 获取参数
                     err_text = ''
                 except:
@@ -818,8 +818,8 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                 rc.hset(group_id, "do_not_repeat", '1')
                 return
 
-            if text[0:5] == "添加关键词" or text[0:5] == "增加关键词":
-                arg = text[5:len(text)].replace("，", ",").split(',')
+            if text[:5] == "添加关键词" or text[:5] == "增加关键词":
+                arg = text[5:].replace("，", ",").split(',')
                 if not len(arg) == 2:
                     logging.warning("[{}] 添加关键词 参数数量错误".format(group_id))
                 else:
@@ -833,8 +833,8 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                 rc.hset(group_id, "do_not_repeat", '1')
                 return
 
-            if text[0:5] == "删除关键词":
-                arg = text[5:len(text)].replace("，", ",").split(',')
+            if text[:5] == "删除关键词":
+                arg = text[5:].replace("，", ",").split(',')
                 if not len(arg) == 2:
                     logging.warning("[{}] 删除关键词 参数数量错误".format(group_id))
                 else:
@@ -848,7 +848,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                 rc.hset(group_id, "do_not_repeat", '1')
                 return
 
-        if "moca爬" in text or "moca爪巴" in text:
+        if "moca" in text or "摩卡" in text and "爬" in text or "爪巴" in text:
             if not is_in_cd(group_id, "keaiPaCD"):
                 if random_do(fetch_config(group_id, "keaiPaChance")):
                     logging.info("[{}] moca爬了".format(group_id))
@@ -863,7 +863,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
             rc.hset(group_id, "do_not_repeat", '1')
             return
 
-        if "moca可爱" in text or "moca老婆" in text or "摩卡老婆" in text or "摩卡可爱" in text:
+        if "moca" in text or "摩卡" in text and "可爱" in text or "老婆" in text:
             if not is_in_cd(group_id, "keaiPaCD"):
                 if random_do(fetch_config(group_id, "keaiPaChance")):
                     logging.info("[{}] moca可爱".format(group_id))
@@ -895,8 +895,8 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
             rc.hset(group_id, "do_not_repeat", '1')
             return
 
-        if text[0:4] == "wlp是" or text[0:4] == "我老婆是" or text[0:4] == "我lp是":
-            lp_name = text[4:len(text)].replace("？", "?")
+        if text[:4] == "wlp是" or text[:4] == "我老婆是" or text[:4] == "我lp是":
+            lp_name = text[4:].replace("？", "?")
             if lp_name == '?' or lp_name == '谁' or lp_name == '谁?':
                 lp_name = fetch_lp(sender_id)
                 if lp_name:
@@ -910,6 +910,11 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                     mirai_reply_text(group_id, session_key, '用户{}设置lp为: {}'.format(sender_id, true_lp_name))
                 else:
                     mirai_reply_text(group_id, session_key, 'az，没有找到nlp呢...')
+            rc.hset(group_id, "do_not_repeat", '1')
+            return
+
+        if text[:4] == '随机选歌':
+            mirai_reply_text(group_id, session_key, rdm_song(text))
             rc.hset(group_id, "do_not_repeat", '1')
             return
 
@@ -952,150 +957,12 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
 
 
 def mirai_private_message_handler(group_id, session_key, sender_id, message_id, message_time, message_chain):
-    pass
-    # texts = ""
-    # for n in range(len(message_chain)):
-    #     if message_chain[n]["type"] == "Plain":
-    #         texts += message_chain[n]["text"]
-    # if not bool(group_id):
-    #     if texts[:4] == '随机选歌':
-    #         print("d:", sender_id, session_key, texts)
-    #         mirai_reply_text(sender_id, session_key, rdm_song(texts), friend=True)
-    #         return
-    #     if text[0:4] == '提交图片':
-    #         error_flag = False
-    #         if len(text) > 4:
-    #             logging.info("[FRIEND] [{}] 提交图片".format(sender_id))
-    #             data_list = []
-    #             category = text[4:len(text)]
-    #             for n in category:
-    #                 if n in string:
-    #                     mirai_reply_text(sender_id, session_key, '名称中含有非法字符，请重试', friend=True)
-    #                     return
-    #             for n in range(len(message_chain)):
-    #                 if message_chain[n].get("type") == "Image":
-    #                     cache_data = {
-    #                         "url": message_chain[n].get("url"),
-    #                         "file_name": message_chain[n].get("imageId").split(".")[0].replace("{", "").replace("}", "")
-    #                     }
-    #                     logging.info("[{}] 收到：{}".format(sender_id, cache_data))
-    #                     data_list.append(cache_data)
-    #             if not bool(data_list):
-    #                 mirai_reply_text(sender_id, session_key, '没有图片', friend=True)
-    #                 return
-    #             # upload/{群号}/月/日/{imageId}
-    #             month = time.strftime("%m")
-    #             day = time.strftime("%d")
-    #             if not os.path.exists("upload\\{}\\{}\\{}\\{}".format(sender_id, month, day, category)):
-    #                 os.makedirs("upload\\{}\\{}\\{}\\{}".format(sender_id, month, day, category))
-    #
-    #             for file_index in range(len(data_list)):
-    #                 try:
-    #                     res = requests.get(data_list[file_index]["url"])
-    #                     content_type = res.headers.get("Content-Type")
-    #                     file_type = content_type.split('/')[1]
-    #                     logging.info("saving {}.{}".format(data_list[file_index]["file_name"], file_type))
-    #                     logging.info("保存路径：upload\\{}\\{}\\{}\\{}\\{}.{}".format(
-    #                         sender_id, month, day, category, data_list[file_index]["file_name"], file_type))
-    #
-    #                     with open("upload\\{}\\{}\\{}\\{}\\{}.{}".format(
-    #                             sender_id, month, day, category, data_list[file_index]["file_name"], file_type
-    #                     ), "wb") as image_file:
-    #                         image_file.write(res.content)
-    #                 except:
-    #                     logging.error(str(traceback.format_exc()))
-    #                     error_flag = True
-    #
-    #             if error_flag:
-    #                 mirai_reply_text(sender_id, session_key, '提交失败', friend=True)
-    #             else:
-    #                 file_count = len(data_list)
-    #                 mirai_reply_text(sender_id, session_key, '成功，收到{}张图片'.format(file_count), friend=True)
-    #         else:
-    #             mirai_reply_text(sender_id, session_key, '参数错误', friend=True)
-    # else:
-        # if texts[:4] == '随机选歌':
-        #     mirai_reply_text(sender_id, session_key, rdm_song(texts), temp=True, temp_group_id=group_id)
-        #     rc.hset(group_id, "do_not_repeat", '1')
-        #     return
-        # if text[0:4] == '提交图片':
-        #     error_flag = False
-        #     if len(text) > 4:
-        #         logging.info("[{}] 提交图片".format(group_id))
-        #         data_list = []
-        #         category = text[4:len(text)]
-        #         for n in category:
-        #             if n in string:
-        #                 mirai_reply_text(group_id, session_key, '名称中含有非法字符，请重试')
-        #                 return
-        #         for n in range(len(message_chain)):
-        #             if message_chain[n].get("type") == "Image":
-        #                 cache_data = {
-        #                     "url": message_chain[n].get("url"),
-        #                     "file_name": message_chain[n].get("imageId").split(".")[0].replace("{", "").replace("}", "")
-        #                 }
-        #                 logging.info("[{}] 收到：{}".format(group_id, cache_data))
-        #                 data_list.append(cache_data)
-        #         if not bool(data_list):
-        #             mirai_reply_text(group_id, session_key, '没有图片')
-        #             return
-        #         # upload/{群号}/月/日/{imageId}
-        #         month = time.strftime("%m")
-        #         day = time.strftime("%d")
-        #         if not os.path.exists("upload\\{}\\{}\\{}\\{}".format(group_id, month, day, category)):
-        #             os.makedirs("upload\\{}\\{}\\{}\\{}".format(group_id, month, day, category))
-        #
-        #         for file_index in range(len(data_list)):
-        #             try:
-        #                 res = requests.get(data_list[file_index]["url"])
-        #                 content_type = res.headers.get("Content-Type")
-        #                 file_type = content_type.split('/')[1]
-        #                 logging.info("saving {}.{}".format(data_list[file_index]["file_name"], file_type))
-        #                 logging.info("保存路径：upload\\{}\\{}\\{}\\{}\\{}.{}".format(
-        #                     group_id, month, day, category, data_list[file_index]["file_name"], file_type))
-        #
-        #                 with open("upload\\{}\\{}\\{}\\{}\\{}.{}".format(
-        #                         group_id, month, day, category, data_list[file_index]["file_name"], file_type
-        #                 ), "wb") as image_file:
-        #                     image_file.write(res.content)
-        #             except:
-        #                 logging.error(str(traceback.format_exc()))
-        #                 error_flag = True
-        #
-        #         if error_flag:
-        #             mirai_reply_text(group_id, session_key, '提交失败')
-        #         else:
-        #             file_count = len(data_list)
-        #             mirai_reply_text(group_id, session_key, '成功，收到{}张图片'.format(file_count))
-        #     else:
-        #         mirai_reply_text(group_id, session_key, '参数错误')
-        #     rc.hset(group_id, "do_not_repeat", '1')
-    # if group_id == 0:  # 好友消息
-    #     if texts[0:4] == '提交图片':
-    #         # config_data = text[4:len(texts)]
-    #         # if not config_data == '':
-    #         #     mirai_reply_text(sender_id, session_key, "请求提交图片：{}".format(config_data), friend=True)
-    #         # else:
-    #         #     mirai_reply_text(sender_id, session_key, "参数错误", friend=True)
-    #         pass
-    #     else:
-    #         group_keywords = json.loads(r.get('key_0'))
-    #         for keys in group_keywords:  # 在字典中遍历查找
-    #             for e in range(len(group_keywords[keys])):  # 遍历名称
-    #                 if texts == group_keywords[keys][e]:  # 若命中名称
-    #                     logging.info("[{}] [FRIEND] 请求：{}".format(group_id, keys))
-    #                     pic_name = rand_pic(keys)
-    #                     mirai_reply_image(sender_id, session_key, path='pic\\' + keys + '\\' + pic_name, friend=True)
-    #                     update_count(0, keys)  # 更新统计次数
-    #                     return
-    # else:  # 临时消息
-    #     group_keywords = json.loads(r.get('key_{}'.format(group_id)))
-    #     for keys in group_keywords:  # 在字典中遍历查找
-    #         for e in range(len(group_keywords[keys])):  # 遍历名称
-    #             if texts == group_keywords[keys][e]:  # 若命中名称
-    #                 logging.info("[{}] [{}] [TEMP] 请求：{}".format(group_id, sender_id, keys))
-    #                 pic_name = rand_pic(keys)
-    #                 mirai_reply_image(sender_id, session_key, path='pic\\' + keys + '\\' + pic_name, temp=True,
-    #                                   temp_group_id=group_id)
-    #                 update_count(group_id, keys)  # 更新统计次数
-    #                 return
+    texts = ""
+    for n in range(len(message_chain)):
+        if message_chain[n]["type"] == "Plain":
+            texts += message_chain[n]["text"]
+    if group_id == 0:  # 好友消息
+        mirai_reply_text(sender_id, session_key, rdm_song(texts), friend=True)
+    else:  # 临时消息
+        mirai_reply_text(sender_id, session_key, rdm_song(texts), temp=True, temp_group_id=group_id)
+        rc.hset(group_id, "do_not_repeat", '1')

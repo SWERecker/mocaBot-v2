@@ -1,6 +1,7 @@
 import json
 import os
-from mirai import *
+from mirai import mirai_init_auth_key
+from mirai import mirai_reply_text
 from function import fetch_group_list
 import time
 import config

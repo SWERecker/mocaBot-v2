@@ -207,7 +207,7 @@ def mirai_fetch_group_id(data):
     """
     try:
         return data["sender"]["group"]["id"]
-    except Exception as e:
+    except:
         return 0
 
 
@@ -221,7 +221,7 @@ def mirai_fetch_user_id(data):
     """
     try:
         return data["sender"]["id"]
-    except Exception as e:
+    except:
         return 0
 
 
@@ -235,7 +235,7 @@ def mirai_fetch_sender_permission(data):
     """
     try:
         return data["sender"]["permission"]
-    except Exception as e:
+    except:
         return 'error_undefined'
 
 
@@ -249,7 +249,7 @@ def mirai_fetch_message_chain(data):
     """
     try:
         return data["messageChain"]
-    except Exception as e:
+    except:
         return 'error_undefined'
 
 
@@ -263,7 +263,7 @@ def mirai_fetch_message_type(data):
     """
     try:
         return data["type"]
-    except Exception as e:
+    except:
         return 'error_undefined'
 
 
