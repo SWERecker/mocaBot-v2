@@ -848,7 +848,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                 rc.hset(group_id, "do_not_repeat", '1')
                 return
 
-        if "moca" in text or "摩卡" in text and "爬" in text or "爪巴" in text:
+        if ("moca" in text or "摩卡" in text) and ("爬" in text or "爪巴" in text):
             if not is_in_cd(group_id, "keaiPaCD"):
                 if random_do(fetch_config(group_id, "keaiPaChance")):
                     logging.info("[{}] moca爬了".format(group_id))
@@ -863,7 +863,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
             rc.hset(group_id, "do_not_repeat", '1')
             return
 
-        if "moca" in text or "摩卡" in text and "可爱" in text or "老婆" in text:
+        if ("moca" in text or "摩卡" in text) and ("可爱" in text or "老婆" in text):
             if not is_in_cd(group_id, "keaiPaCD"):
                 if random_do(fetch_config(group_id, "keaiPaChance")):
                     logging.info("[{}] moca可爱".format(group_id))
