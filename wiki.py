@@ -9,10 +9,11 @@ new_data = {'updateTime': str(time.strftime('%Y-%m-%d %H:%M',time.localtime(time
 
 names_list = os.listdir(config.mirai_path + '\\plugins\\MiraiAPIHTTP\\images\\pic\\')
 file_count_list = []
-for names in names_list:
-    files_list = os.listdir(config.mirai_path + '\\plugins\\MiraiAPIHTTP\\images\\pic\\' + names + '\\')
-    files_count = len(files_list)
-    file_count_list.append(files_count)
+for name in names_list:
+    if os.path.isdir(config.mirai_path + "\\plugins\\MiraiAPIHTTP\\images\\pic\\" + name):
+        files_list = os.listdir(config.mirai_path + '\\plugins\\MiraiAPIHTTP\\images\\pic\\' + name + '\\')
+        files_count = len(files_list)
+        file_count_list.append(files_count)
 new_data['peopleCount'] = len(names_list)
 new_data['picCount'] = sum(file_count_list)
 
