@@ -14,7 +14,7 @@ loghandler.setLevel(logging.DEBUG)
 loghandler.setFormatter(logging.Formatter('%(asctime)s - [%(levelname)s]: %(message)s'))
 logger = logging.getLogger('botlogger')
 logger.addHandler(loghandler)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 logger.info("日志初始化成功")
 ##################
 

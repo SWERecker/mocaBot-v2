@@ -916,8 +916,8 @@ def mirai_group_message_handler(group_id, session_key, sender_permission, sender
             for e in range(len(group_keywords[keys])):  # 遍历名称
                 if group_keywords[keys][e] in text:  # 若命中名称
                     if not is_in_cd(group_id, "replyCD") or sender_id == config.superman:  # 判断是否在回复图片的cd中
-                        logger.info("[{}] 请求：{} => {}".format(group_id, keys, pic_name))
                         pic_name = rand_pic(keys)
+                        logger.info("[{}] 请求：{} => {}".format(group_id, keys, pic_name))
                         mirai_reply_image(group_id, session_key, path='pic\\' + keys + '\\' + pic_name)
                         update_count(group_id, keys)  # 更新统计次数
                         update_cd(group_id, "replyCD")  # 更新cd
@@ -927,10 +927,10 @@ def mirai_group_message_handler(group_id, session_key, sender_permission, sender
             for key in quo_data[name]:
                 if key in text:
                     if not is_in_cd(group_id, "replyCD") or sender_id == config.superman:
-                        logger.info("[{}] 请求：{} => {}".format(group_id, name, pic_name))
                         quo_words = r.hget("QUOTATION", name).split(',')
                         random_num = random.randint(0, len(quo_words) - 1)
                         mirai_reply_text(group_id, session_key, quo_words[random_num].strip())
+                        logger.info("[{}] 请求：{} => {}".format(group_id, name, quo_words[random_num]))
                         update_count(group_id, name)  # 更新统计次数
                     return
 
