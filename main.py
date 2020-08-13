@@ -1,19 +1,22 @@
+import logging
+import threading
+import traceback
+import redis
+import websocket
+
+from logging import handlers
 from function import *
 from mirai import *
-import logging
-import redis
-import threading
-import websocket
-import traceback
 
-log_filename = "log/" + str(time.strftime('LOG-%Y-%m-%d',time.localtime(time.time()))) + ".txt"
-if not os.path.exists("log"):
-    os.mkdir("log")
-if not os.path.isfile(log_filename):
-    open(log_filename, "w").close()
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s',
-                    datefmt='%a, %d %b %Y %H:%M:%S', filename=log_filename, filemode='a')
+##################
+loghandler = handlers.TimedRotatingFileHandler(os.path.join('log', 'mocaBot.log'), when='midnight', encoding='utf-8')
+loghandler.setLevel(logging.DEBUG)
+loghandler.setFormatter(logging.Formatter('%(asctime)s - [%(levelname)s]: %(message)s'))
+logger = logging.getLogger('botlogger')
+logger.addHandler(loghandler)
+logger.setLevel(logging.DEBUG)
+logger.info("日志初始化成功")
+##################
 
 session_key = mirai_init_auth_key()
 pool = redis.ConnectionPool(host='localhost', port=6379, db=0, decode_responses=True)
@@ -30,29 +33,21 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
     global handling_flag
     try:
         if message_type == 'GroupMessage':
-            logging.debug("[GROUP] [{}] {},{} => {}".format(group_id, message_id, message_time, message_chain))
-            rc.hset(group_id, 'at_moca', at_bot)  # 设置atMoca标志
-            text = fetch_text(message_chain)
-            mirai_group_message_handler(group_id,
-                                        session_key, text, sender_permission, sender_id, message_chain)
-            if not rc.hget(group_id, "do_not_repeat") == '1':
-                repeater(group_id, session_key, message_chain)
+            logger.debug("[GROUP] [{}] {},{} => {}".format(group_id, message_id, message_time, message_chain))
+            mirai_group_message_handler(group_id, session_key, sender_permission, sender_id, message_chain, at_bot)
 
         if message_type == 'FriendMessage':
-            logging.debug("[FRIEND] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
+            logger.debug("[FRIEND] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
             mirai_private_message_handler(group_id, session_key, sender_id, message_id, message_time, message_chain)
 
         if message_type == 'TempMessage':
-            logging.debug(
-                "[TEMP] [{}] [{}] {},{} => {}".format(group_id, sender_id, message_id, message_time, message_chain))
+            logger.debug("[TEMP] [{}] [{}] {},{} => {}".format(group_id, sender_id, message_id, message_time, message_chain))
             mirai_private_message_handler(group_id, session_key, sender_id, message_id, message_time, message_chain)
 
     except:
-        logging.error(str(traceback.format_exc()))
+        logger.error(str(traceback.format_exc()))
     finally:
-        rc.hset(group_id, 'at_moca', '0')  # 复位atMoca标志
         handling_flag[str(group_id)] = False
-        rc.hset(group_id, "do_not_repeat", '0')
         if not rc.get('file_list_init') == '1':
             init_files_list()
 
@@ -66,12 +61,12 @@ def on_message(ws, message):  # 接受ws数据
 
 
 def on_error(ws, error):
-    logging.error(str(traceback.format_exc()))
+    logger.error(str(traceback.format_exc()))
 
 
 def on_close(ws):
     rc.flushdb()
-    logging.info("Websocket 连接关闭")  # 记录ws关闭连接
+    logger.warning("Websocket 连接关闭")  # 记录ws关闭连接
     user_input = input("Restart?[y/N]: \n")
     if user_input.lower() == "y":
         os.system('python main.py')
@@ -100,7 +95,7 @@ for g_id in fetch_group_list():
 
 # websocket.enableTrace(True)    #Websocket调试模式
 ws = websocket.WebSocketApp(
-    config.ws_addr + session_key,
+    "{}{}".format(config.ws_addr, session_key),
     on_message=on_message,
     on_error=on_error,
     on_close=on_close

@@ -1,10 +1,11 @@
 import json
-import config
-import requests
 import logging
 import os
 import time
+import requests
+import config
 
+logger = logging.getLogger('botlogger')
 
 def mirai_auth():
     """
@@ -22,7 +23,7 @@ def mirai_auth():
     r_verify_json = json.loads(r_verify_json.text)
 
     if r_verify_json.get('code') == 0:
-        logging.info('收到sessionKey:{}'.format(r_auth_json.get('session')))
+        logger.info('收到sessionKey: {}'.format(r_auth_json.get('session')))
         auth_json['auth_key'] = r_auth_json['session']
         time_expire = int(time.time()) + (25 * 60)
         auth_json['expire_time'] = time_expire
@@ -30,7 +31,7 @@ def mirai_auth():
             auth_file.write(json.dumps(auth_json))
         return r_auth_json['session']
     else:
-        logging.error('返回错误，错误代码：{}'.format(r_verify_json.get('code')))
+        logger.error('返回错误，错误代码：{}'.format(r_verify_json.get('code')))
         return r_verify_json.get('code')
 
 
@@ -61,15 +62,15 @@ def mirai_init_auth_key():
             local_expire_time = auth_json.get('expire_time')
             local_auth_key = auth_json.get('auth_key')
     except IOError:
-        logging.warning("IOError:打开本地auth.json失败")
+        logger.warning("IOError:打开本地auth.json失败")
         local_auth_key = ''
         local_expire_time = 0
 
     if local_auth_key == '' or check_if_key_expire(local_expire_time):
-        logging.info("无本地缓存sessionKey或者sessionKey已超时,更新sessionKey")
+        logger.info("无本地缓存sessionKey或者sessionKey已超时,更新sessionKey")
         return mirai_auth()
     else:
-        logging.info("sessionKey缓存命中")
+        logger.info("sessionKey缓存命中")
         return local_auth_key
 
 
@@ -105,7 +106,7 @@ def mirai_reply_text(target_id, session_key, text, friend=False, temp=False, tem
             message_type = 'GROUP'
             res = requests.post(url=config.groupMessage_url, data=final_data)
 
-        logging.debug("[EVENT] reply_text => {m_type}, {target} : {content}".format(target=target_id, content=text,
+        logger.debug("[EVENT] reply_text <= {m_type}, {target} : {content}".format(target=target_id, content=text,
                                                                                    m_type=message_type))
 
         r_json = json.loads(res.text)
@@ -147,8 +148,8 @@ def mirai_reply_image(target_id, session_key, path='', image_id='', friend=False
         else:
             message_type = 'GROUP'
             res = requests.post(url=config.groupMessage_url, data=final_data)
-        logging.debug(
-            "[EVENT] reply_image => {m_type}, {target} : path={p_path}, imageId={p_id}".format(target=target_id,
+        logger.debug(
+            "[EVENT] reply_image <= {m_type}, {target} : path={p_path}, imageId={p_id}".format(target=target_id,
                                                                                                p_path=path,
                                                                                                p_id=image_id,
                                                                                                m_type=message_type))
@@ -188,10 +189,10 @@ def mirai_reply_message_chain(target_id, session_key, message, friend=False, tem
             res = requests.post(url=config.groupMessage_url, data=final_data)
 
         r_json = json.loads(res.text)
-        logging.debug("[EVENT] reply_message_chain => {m_type}, {target} : messageChain:{msg}".format(target=target_id,
+        logger.debug("[EVENT] reply_message_chain <= {m_type}, {target} : messageChain:{msg}".format(target=target_id,
                                                                                                      m_type=message_type,
                                                                                                      msg=message))
-        logging.debug("RETURN CODE: {}, MSG_ID: {}".format(r_json.get('code'), r_json.get('messageId')))
+        logger.debug("RETURN CODE: {}, MSG_ID: {}".format(r_json.get('code'), r_json.get('messageId')))
         return r_json.get('code'), r_json.get('messageId')
     else:
         return 'error_invalid_parameter'

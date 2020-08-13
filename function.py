@@ -1,14 +1,16 @@
+import difflib
 import json
 import logging
-import random
-import redis
-from mirai import *
-from prettytable import PrettyTable
-from PIL import Image, ImageDraw, ImageFont
-import difflib
 import os
+import random
 import traceback
+import redis
 
+from PIL import Image, ImageDraw, ImageFont
+from prettytable import PrettyTable
+from mirai import *
+
+logger = logging.getLogger('botlogger')
 pool = redis.ConnectionPool(host='localhost', port=6379, db=0, decode_responses=True)
 r = redis.Redis(connection_pool=pool)
 cache_pool = redis.ConnectionPool(host='localhost', port=6379, db=1, decode_responses=True)
@@ -60,7 +62,7 @@ def update_lp(qq, lp_name):
     返回：无
     """
     r.hset("LPLIST", qq, lp_name)
-    logging.info("修改lp记录：用户{}设置lp为:{}".format(qq, lp_name))
+    logger.info("修改lp记录：用户{}设置lp为:{}".format(qq, lp_name))
 
 
 def fetch_lp(qq):
@@ -92,7 +94,7 @@ def mirai_json_process(bot_id, data):
     }
     """
     group_id = ''
-    at_bot = '0'
+    at_bot = False
     message_id = 0
     message_time = 0
     r_json_dict = json.loads(data)
@@ -104,10 +106,8 @@ def mirai_json_process(bot_id, data):
         del message_chain[0]
         for n in range(len(message_chain)):
             if message_chain[n].get('type') == 'At' and message_chain[n].get('target') == bot_id:
-                at_bot = '1'
+                at_bot = True
                 break
-            else:
-                at_bot = '0'
     sender_id = r_json_dict["sender"].get('id')
     sender_permission = r_json_dict["sender"].get('permission')
     if r_json_dict["sender"].get('group'):
@@ -177,7 +177,7 @@ def init_keyword_list(group_id):
     """
     if not r.hexists("KEYWORDS", group_id):
         r.hset("KEYWORDS", group_id, r.hget("KEYWORDS", "key_template"))
-        logging.info("[{}] 初始化关键词列表".format(group_id))
+        logger.info("[{}] 初始化关键词列表".format(group_id))
         return True
     else:
         return False
@@ -231,8 +231,8 @@ def init_files_list():
         if os.path.isdir(config.mirai_path + "\\plugins\\MiraiAPIHTTP\\images\\pic\\" + name):
             file_list = os.listdir(config.mirai_path + "\\plugins\\MiraiAPIHTTP\\images\\pic\\" + name + "\\")
             rc.hset("FILES", name, json.dumps(file_list, ensure_ascii=False))
-            logging.debug("saving {} to redis, data : {}".format(name, file_list))
-    logging.info('重建图片索引完成')
+            logger.debug("saving {} to redis, data : {}".format(name, file_list))
+    logger.info('重建图片索引完成')
     rc.set('file_list_init', '1', ex=600)
     return True
 
@@ -248,10 +248,10 @@ def fetch_config(group_id, arg):
     """
     if not r.hexists("CONFIG", group_id):
         r.hset("CONFIG", group_id, r.hget("CONFIG", "config_template"))
-        logging.info("[{}] 初始化参数".format(group_id))
+        logger.info("[{}] 初始化参数".format(group_id))
     config_json = r.hget("CONFIG", group_id)
     config_data = json.loads(config_json)
-    logging.debug("[{}] 获取CONFIG {} = {}".format(group_id, arg, config_data.get(arg)))
+    logger.debug("[{}] 获取CONFIG {} = {}".format(group_id, arg, config_data.get(arg)))
     return config_data.get(arg)
 
 
@@ -269,7 +269,7 @@ def update_config(group_id, arg, value):
     config_data = json.loads(config_json)
     config_data[arg] = value
     r.hset("CONFIG", group_id, json.dumps(config_data, ensure_ascii=False))
-    logging.debug("[{}] 设置CONFIG {} = {}".format(group_id, arg, value))
+    logger.debug("[{}] 设置CONFIG {} = {}".format(group_id, arg, value))
     return config_data.get(arg)
 
 
@@ -285,15 +285,15 @@ def append_keyword(group_id, key, value):
     """
     group_keywords = json.loads(r.hget('KEYWORDS', group_id))
     if not group_keywords.get(key):
-        logging.warning("[{}] 名称 {} 不存在".format(group_id, key))
+        logger.warning("[{}] 名称 {} 不存在".format(group_id, key))
         return False
     if value in group_keywords[key]:
-        logging.warning("[{}] 向 {} 中添加重复关键词 {}".format(group_id, key, value))
+        logger.warning("[{}] 向 {} 中添加重复关键词 {}".format(group_id, key, value))
         return False
     else:
         group_keywords[key].append(value)
         r.hset('KEYWORDS', group_id, json.dumps(group_keywords, ensure_ascii=False))
-        logging.info("[{}] 向 {} 中添加关键词 {}".format(group_id, key, value))
+        logger.info("[{}] 向 {} 中添加关键词 {}".format(group_id, key, value))
         return True
 
 
@@ -309,15 +309,15 @@ def remove_keyword(group_id, key, value):
     """
     group_keywords = json.loads(r.hget('KEYWORDS', group_id))
     if not group_keywords.get(key):
-        logging.warning("[{}] 名称 {} 不存在".format(group_id, key))
+        logger.warning("[{}] 名称 {} 不存在".format(group_id, key))
         return False
     if value in group_keywords.get(key):
         group_keywords[key].remove(value)
         r.hset('KEYWORDS', group_id, json.dumps(group_keywords, ensure_ascii=False))
-        logging.info("[{}] 删除 {} 中的关键词 {}".format(group_id, key, value))
+        logger.info("[{}] 删除 {} 中的关键词 {}".format(group_id, key, value))
         return True
     else:
-        logging.warning("[{}] {} 中不存在关键词 {}".format(group_id, key, value))
+        logger.warning("[{}] {} 中不存在关键词 {}".format(group_id, key, value))
         return False
 
 
@@ -358,15 +358,15 @@ def repeater(group_id, session_key, message):
         if m_cache_0 == m_cache_1 and rc.hget(group_id, "do_not_repeat") == '0':
             if not is_in_cd(group_id, "repeatCD"):
                 if random_do(fetch_config(group_id, "repeatChance")):
-                    logging.debug("[{}] 命中复读条件且不在cd中且命中概率，开始复读".format(group_id))
+                    logger.debug("[{}] 命中复读条件且不在cd中且命中概率，开始复读".format(group_id))
                     del processed_message_chain[len(processed_message_chain) - 1]
                     mirai_reply_message_chain(group_id, session_key, processed_message_chain)
                     update_cd(group_id, "repeatCD")
                     rc.hset(group_id, "m_last_repeat", json_processed_message_chain)
                 else:
-                    logging.debug("[{}] 未命中复读概率".format(group_id))
+                    logger.debug("[{}] 未命中复读概率".format(group_id))
             else:
-                logging.debug("[{}] 复读cd冷却中".format(group_id))
+                logger.debug("[{}] 复读cd冷却中".format(group_id))
 
 
 def is_in_cd(group_id, cd_type):
@@ -445,7 +445,7 @@ def create_dict_pic(data, group_id, content):
         while pos_y < img_y:
             im_new.paste(img, (0, pos_y))
             pos_y += bg_y
-            logging.debug("pasted:y, {}".format(pos_y))
+            logger.debug("pasted:y, {}".format(pos_y))
     if bg_x < img_x:
         pos_x = 0
         pos_y = 0
@@ -453,7 +453,7 @@ def create_dict_pic(data, group_id, content):
             while pos_x < img_x:
                 im_new.paste(img, (pos_x, pos_y))
                 pos_x += bg_x
-                logging.debug("pasted:x,y {},{}".format(pos_x, pos_y))
+                logger.debug("pasted:x,y {},{}".format(pos_x, pos_y))
             pos_x = 0
             pos_y += bg_y
     draw.multiline_text((space, space), tab_info, fill=(0, 0, 0), font=font)
@@ -475,10 +475,10 @@ def update_count(group_id, name):
     count_list = json.loads(r.hget("COUNT", group_id))
     if not count_list.get(name):
         count_list[name] = 1
-        logging.info("[{}] SET {} COUNT = 1".format(group_id, name))
+        logger.info("[{}] SET {} COUNT = 1".format(group_id, name))
     else:
         count_list[name] += 1
-        logging.info("[{}] {} COUNT + 1".format(group_id, name))
+        logger.info("[{}] {} COUNT + 1".format(group_id, name))
     r.hset("COUNT", group_id, json.dumps(count_list, ensure_ascii=False))
     return True
 
@@ -539,7 +539,6 @@ def rand_pic(name):
     file_list = json.loads(rc.hget("FILES", name))
     random.shuffle(file_list)
     random_file = random.choice(file_list)
-    logging.info("Choose {}".format(random_file))
     return random_file
 
 
@@ -561,7 +560,7 @@ def match_lp(lp_name, keyword_list):
         for e in range(len(keyword_list[keys])):  # 遍历名称
             seed = difflib.SequenceMatcher(None, str(lp_name), keyword_list[keys][e]).quick_ratio()
             if seed > 0.6:
-                logging.debug("{} 最接近 : {} ,与 {} 最相似 ,相似度为 ：{}".format(lp_name, keys, keyword_list[keys][e], seed))
+                logger.debug("{} 最接近 : {} ,与 {} 最相似 ,相似度为 ：{}".format(lp_name, keys, keyword_list[keys][e], seed))
                 simi_dict.update({keys: seed})
     if bool(simi_dict):
         return sorted(simi_dict, key=simi_dict.__getitem__, reverse=True)[0]
@@ -583,10 +582,10 @@ def rdm_song(text):
             para["level"] = t[2:]
         if t[:2] == '比赛':
             para["data"] = 'comp'
-    logging.info(para)
+    logger.info(para)
     res = requests.get(url, params=para)
-    logging.info(res.url)
-    logging.info("result: " + res.text)
+    logger.info(res.url)
+    logger.info("result: " + res.text)
     result = json.loads(res.text)
     if result.get("msg") == "error":
         return "筛选条件有误，请检查"
@@ -600,7 +599,7 @@ def rdm_song(text):
 
 
 # noinspection PyBroadException
-def mirai_group_message_handler(group_id, session_key, text, sender_permission, sender_id, message_chain):
+def mirai_group_message_handler(group_id, session_key, sender_permission, sender_id, message_chain, at_bot):
     """
     功能：群聊消息处理器
     参数：{
@@ -608,33 +607,33 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
         session_key       : sessionKey,
         text              : 消息的文本内容,
         sender_permission : 发消息的人的权限,
-        sender_id         : 发消息的人的QQ号
+        sender_id         : 发消息的人的QQ号,
+        at_bot            : 是否@Bot
     }
     返回：
     """
-    if rc.hget(group_id, 'at_moca') == '1':
+    text = fetch_text(message_chain)
+    if at_bot:
         if '关键词' in text:
             if not is_in_cd(group_id, "replyHelpCD"):
-                logging.info("[{}] 请求关键词列表".format(group_id))
+                logger.info("[{}] 请求关键词列表".format(group_id))
                 json_data = json.loads(r.hget("KEYWORDS", group_id))
                 create_dict_pic(json_data, str(group_id) + '_key', '关键词')
                 mirai_reply_image(group_id, session_key, str(group_id) + '_key.png')
                 update_cd(group_id, "replyHelpCD")
             else:
-                logging.debug("[{}] 关键词列表cd冷却中".format(group_id))
-            rc.hset(group_id, "do_not_repeat", '1')
+                logger.debug("[{}] 关键词列表cd冷却中".format(group_id))
             return
 
         if "统计次数" in text or "次数统计" in text:
             if not is_in_cd(group_id, "replyHelpCD"):
-                logging.info("[{}] 请求统计次数".format(group_id))
+                logger.info("[{}] 请求统计次数".format(group_id))
                 json_data = json.loads(r.hget("COUNT", group_id))
                 create_dict_pic(json_data, str(group_id) + '_count', '次数')  # 将json转换为图片
                 mirai_reply_image(group_id, session_key, str(group_id) + "_count.png")  # 发送图片
                 update_cd(group_id, "replyHelpCD")
             else:
-                logging.debug("[{}] 统计次数cd冷却中".format(group_id))
-            rc.hset(group_id, "do_not_repeat", '1')
+                logger.debug("[{}] 统计次数cd冷却中".format(group_id))
             return
 
         if "lp排行" in text:
@@ -643,55 +642,51 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                 create_dict_pic(result, str(group_id) + '_lprank', '前十人数')
                 mirai_reply_image(group_id, session_key, str(group_id) + "_lprank.png")  # 发送图片
                 update_cd(group_id, "replyHelpCD")
-            rc.hset(group_id, "do_not_repeat", '1')
             return
 
         if "图片数量" in text:
             if not is_in_cd(group_id, "replyHelpCD"):
-                logging.info("[{}] 请求统计图片数量".format(group_id))
+                logger.info("[{}] 请求统计图片数量".format(group_id))
                 json_data = fetch_count_list(group_id)
                 create_dict_pic(json_data, str(group_id) + '_piccount', '图片数量')  # 将json转换为图片
                 mirai_reply_image(group_id, session_key, str(group_id) + "_piccount.png")  # 发送图片
                 update_cd(group_id, "replyHelpCD")
             else:
-                logging.debug("[{}] 统计次数cd冷却中".format(group_id))
-            rc.hset(group_id, "do_not_repeat", '1')
+                logger.debug("[{}] 统计次数cd冷却中".format(group_id))
             return
 
         if "爬" in text or "爪巴" in text:
             if not is_in_cd(group_id, "keaiPaCD"):
                 if random_do(fetch_config(group_id, "keaiPaChance")):
-                    logging.info("[{}] moca爬了".format(group_id))
+                    logger.info("[{}] moca爬了".format(group_id))
                     pa_list = json.loads(r.hget("KEAIPA", "PA"))
                     mirai_reply_image(group_id, session_key, image_id=pa_list[random.randint(0, len(pa_list) - 1)])
                     update_cd(group_id, "keaiPaCD")
                 else:
-                    logging.debug("[{}] moca爬，但是没有命中概率".format(group_id))
+                    logger.debug("[{}] moca爬，但是没有命中概率".format(group_id))
             else:
-                logging.debug("[{}] moca爬，但是cd冷却中".format(group_id))
+                logger.debug("[{}] moca爬，但是cd冷却中".format(group_id))
             update_count(group_id, '爬')
-            rc.hset(group_id, "do_not_repeat", '1')
             return
 
         if "可爱" in text or "老婆" in text or "lp" in text or "mua" in text:
             if not is_in_cd(group_id, "keaiPaCD"):
                 if random_do(fetch_config(group_id, "keaiPaChance")):
-                    logging.info("[{}] moca可爱".format(group_id))
+                    logger.info("[{}] moca可爱".format(group_id))
                     keai_list = json.loads(r.hget("KEAIPA", "KEAI"))
                     mirai_reply_image(group_id, session_key, image_id=keai_list[random.randint(0, len(keai_list) - 1)])
                     update_cd(group_id, "keaiPaCD")
                 else:
-                    logging.debug("[{}] moca可爱，但是没有命中概率".format(group_id))
+                    logger.debug("[{}] moca可爱，但是没有命中概率".format(group_id))
             else:
-                logging.debug("[{}] moca可爱，但是cd冷却中".format(group_id))
+                logger.debug("[{}] moca可爱，但是cd冷却中".format(group_id))
             update_count(group_id, '可爱')
-            rc.hset(group_id, "do_not_repeat", '1')
             return
 
         if text[:4] == '提交图片':
             error_flag = False
             if len(text) > 4:
-                logging.info("[{}] 提交图片".format(group_id))
+                logger.info("[{}] 提交图片".format(group_id))
                 data_list = []
                 category = text[4:]
                 for n in category:
@@ -704,7 +699,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                             "url": message_chain[n].get("url"),
                             "file_name": message_chain[n].get("imageId").split(".")[0].replace("{", "").replace("}", "")
                         }
-                        logging.info("[{}] 收到：{}".format(group_id, cache_data))
+                        logger.info("[{}] 收到：{}".format(group_id, cache_data))
                         data_list.append(cache_data)
                 if not bool(data_list):
                     mirai_reply_text(group_id, session_key, '没有图片')
@@ -720,8 +715,8 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                         res = requests.get(data_list[file_index]["url"])
                         content_type = res.headers.get("Content-Type")
                         file_type = content_type.split('/')[1]
-                        logging.info("saving {}.{}".format(data_list[file_index]["file_name"], file_type))
-                        logging.info("保存路径：upload\\{}\\{}\\{}\\{}\\{}.{}".format(
+                        logger.info("saving {}.{}".format(data_list[file_index]["file_name"], file_type))
+                        logger.info("保存路径：upload\\{}\\{}\\{}\\{}\\{}.{}".format(
                             group_id, month, day, category, data_list[file_index]["file_name"], file_type))
 
                         with open("upload\\{}\\{}\\{}\\{}\\{}.{}".format(
@@ -729,7 +724,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                         ), "wb") as image_file:
                             image_file.write(res.content)
                     except:
-                        logging.error(str(traceback.format_exc()))
+                        logger.error(str(traceback.format_exc()))
                         error_flag = True
 
                 if error_flag:
@@ -739,8 +734,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                     mirai_reply_text(group_id, session_key, '成功，收到{}张图片'.format(file_count))
             else:
                 mirai_reply_text(group_id, session_key, '参数错误')
-            rc.hset(group_id, "do_not_repeat", '1')
-
+            return
     else:
         init_keyword_list(group_id)
         group_keywords = json.loads(r.hget("KEYWORDS", group_id))
@@ -750,7 +744,6 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
             quo_data[name] = []
             for key in quo_list:
                 quo_data[name].append(key)
-
         if sender_permission == 'ADMINISTRATOR' or sender_permission == 'OWNER' or sender_id == config.superman:
             if text[:6] == "设置图片cd":  # 设置图片cd
                 try:
@@ -758,7 +751,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                     to_set_cd = int(arg.rstrip("秒"))  # 获取参数
                     err_text = ''
                 except:
-                    logging.warning("[{}] 设置图片cd 参数错误".format(group_id))
+                    logger.warning("[{}] 设置图片cd 参数错误".format(group_id))
                     to_set_cd = 10
                     err_text = '参数有误，请检查格式，当前已重置为10秒\n'
                 if to_set_cd < 5:  # 最低5秒
@@ -767,8 +760,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                     mirai_reply_text(group_id, session_key,
                                      "{}当前图片cd：{}秒".format(err_text,
                                                            update_config(group_id, "replyCD", to_set_cd)))  # 回复新参数
-                    logging.info("[{}] 设置图片cd {}秒".format(group_id, to_set_cd))
-                rc.hset(group_id, "do_not_repeat", '1')
+                    logger.info("[{}] 设置图片cd {}秒".format(group_id, to_set_cd))
                 return
 
             if text[:6] == "设置复读cd":  # 设置复读cd
@@ -777,7 +769,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                     to_set_cd = int(arg.rstrip("秒"))  # 获取参数
                     err_text = ''
                 except:
-                    logging.warning("[{}] 设置复读cd 参数错误".format(group_id))
+                    logger.warning("[{}] 设置复读cd 参数错误".format(group_id))
                     to_set_cd = 300
                     err_text = '参数有误，请检查格式，当前已重置为300秒\n'
                 if to_set_cd < 120:  # 最低120秒
@@ -786,8 +778,7 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                     mirai_reply_text(group_id, session_key,
                                      "{}当前复读cd：{}秒".format(err_text,
                                                            update_config(group_id, "repeatCD", to_set_cd)))  # 回复新参数
-                    logging.info("[{}] 设置复读cd {}秒".format(group_id, to_set_cd))
-                rc.hset(group_id, "do_not_repeat", '1')
+                    logger.info("[{}] 设置复读cd {}秒".format(group_id, to_set_cd))
                 return
 
             if text[:6] == "设置复读概率":  # 设置复读概率
@@ -796,33 +787,31 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                     to_set_value = int(arg.rstrip("%"))  # 获取参数
                     err_text = ''
                 except:
-                    logging.warning("[{}] 设置复读概率 参数错误".format(group_id))
+                    logger.warning("[{}] 设置复读概率 参数错误".format(group_id))
                     to_set_value = 50
                     err_text = '参数有误，请检查格式，当前已重置为50%\n'
                 if 0 <= to_set_value <= 100:
                     mirai_reply_text(group_id, session_key,
                                      "{}当前复读概率：{}%".format(err_text, update_config(group_id, "repeatChance",
                                                                                    to_set_value)))  # 回复新参数
-                    logging.info("[{}] 设置复读概率 {}%".format(group_id, to_set_value))
+                    logger.info("[{}] 设置复读概率 {}%".format(group_id, to_set_value))
                 else:
                     mirai_reply_text(group_id, session_key, "错误：概率为介于0~100之间的值")
-                rc.hset(group_id, "do_not_repeat", '1')
                 return
 
             if text == "查看当前参数":  # 查看当前参数
-                logging.info("[{}] 查看参数".format(group_id))
+                logger.info("[{}] 查看参数".format(group_id))
                 to_reply_text = ''  # 生成参数字符串
                 to_reply_text += "当前复读概率：" + str(fetch_config(group_id, "repeatChance")) + "%\n"
                 to_reply_text += "当前复读cd：" + str(fetch_config(group_id, "repeatCD")) + "秒\n"
                 to_reply_text += "当前图片cd：" + str(fetch_config(group_id, "replyCD")) + "秒"
                 mirai_reply_text(group_id, session_key, to_reply_text)  # 回复内容
-                rc.hset(group_id, "do_not_repeat", '1')
                 return
 
             if text[:5] == "添加关键词" or text[:5] == "增加关键词":
                 arg = text[5:].replace("，", ",").split(',')
                 if not len(arg) == 2:
-                    logging.warning("[{}] 添加关键词 参数数量错误".format(group_id))
+                    logger.warning("[{}] 添加关键词 参数数量错误".format(group_id))
                 else:
                     if not arg[0] in group_keywords:
                         mirai_reply_text(group_id, session_key, "未找到 {}，请检查名称是否正确".format(arg[0]))  # 回复内容
@@ -831,13 +820,12 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                             mirai_reply_text(group_id, session_key, "向 {} 中添加了关键词：{}".format(arg[0], arg[1]))  # 回复内容
                         else:
                             mirai_reply_text(group_id, session_key, "{} 中关键词：{} 已存在".format(arg[0], arg[1]))  # 回复内容
-                rc.hset(group_id, "do_not_repeat", '1')
                 return
 
             if text[:5] == "删除关键词":
                 arg = text[5:].replace("，", ",").split(',')
                 if not len(arg) == 2:
-                    logging.warning("[{}] 删除关键词 参数数量错误".format(group_id))
+                    logger.warning("[{}] 删除关键词 参数数量错误".format(group_id))
                 else:
                     if not arg[0] in group_keywords:
                         mirai_reply_text(group_id, session_key, "未找到 {}，请检查名称是否正确".format(arg[0]))  # 回复内容
@@ -846,37 +834,34 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                             mirai_reply_text(group_id, session_key, "删除了 {} 中的关键词：{}".format(arg[0], arg[1]))  # 回复内容
                         else:
                             mirai_reply_text(group_id, session_key, "{} 中未找到关键词：{}".format(arg[0], arg[1]))  # 回复内容
-                rc.hset(group_id, "do_not_repeat", '1')
                 return
 
         if ("moca" in text or "摩卡" in text) and ("爬" in text or "爪巴" in text):
             if not is_in_cd(group_id, "keaiPaCD"):
                 if random_do(fetch_config(group_id, "keaiPaChance")):
-                    logging.info("[{}] moca爬了".format(group_id))
+                    logger.info("[{}] moca爬了".format(group_id))
                     pa_list = json.loads(r.hget("KEAIPA", "KEAI"))
                     mirai_reply_image(group_id, session_key, image_id=pa_list[random.randint(0, len(pa_list) - 1)])
                     update_cd(group_id, "keaiPaCD")
                 else:
-                    logging.debug("[{}] moca爬，但是没有命中概率".format(group_id))
+                    logger.debug("[{}] moca爬，但是没有命中概率".format(group_id))
             else:
-                logging.debug("[{}] moca爬，但是cd冷却中".format(group_id))
+                logger.debug("[{}] moca爬，但是cd冷却中".format(group_id))
             update_count(group_id, '爬')
-            rc.hset(group_id, "do_not_repeat", '1')
             return
 
         if ("moca" in text or "摩卡" in text) and ("可爱" in text or "老婆" in text):
             if not is_in_cd(group_id, "keaiPaCD"):
                 if random_do(fetch_config(group_id, "keaiPaChance")):
-                    logging.info("[{}] moca可爱".format(group_id))
+                    logger.info("[{}] moca可爱".format(group_id))
                     keai_list = json.loads(r.hget("KEAIPA", "KEAI"))
                     mirai_reply_image(group_id, session_key, image_id=keai_list[random.randint(0, len(keai_list) - 1)])
                     update_cd(group_id, "keaiPaCD")
                 else:
-                    logging.debug("[{}] moca可爱，但是没有命中概率".format(group_id))
+                    logger.debug("[{}] moca可爱，但是没有命中概率".format(group_id))
             else:
-                logging.debug("[{}] moca可爱，但是cd冷却中".format(group_id))
+                logger.debug("[{}] moca可爱，但是cd冷却中".format(group_id))
             update_count(group_id, '可爱')
-            rc.hset(group_id, "do_not_repeat", '1')
             return
 
         if "来点wlp" in text or "来点lp" in text or "来点老婆" in text or "来点我老婆" in text:
@@ -893,7 +878,6 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                     update_count(group_id, lp_name)  # 更新统计次数
                 else:
                     mirai_reply_text(group_id, session_key, 'az，似乎你还没有设置lp呢，用“wlp是xxx”来设置一个吧')
-            rc.hset(group_id, "do_not_repeat", '1')
             return
 
         if text[:4] == "wlp是" or text[:4] == "我老婆是" or text[:4] == "我lp是":
@@ -911,50 +895,47 @@ def mirai_group_message_handler(group_id, session_key, text, sender_permission, 
                     mirai_reply_text(group_id, session_key, '用户{}设置lp为: {}'.format(sender_id, true_lp_name))
                 else:
                     mirai_reply_text(group_id, session_key, 'az，没有找到nlp呢...')
-            rc.hset(group_id, "do_not_repeat", '1')
             return
 
         if text[:4] == '随机选歌':
             mirai_reply_text(group_id, session_key, rdm_song(text))
-            rc.hset(group_id, "do_not_repeat", '1')
             return
 
         for keys in group_keywords:  # 在字典中遍历查找
             for e in range(len(group_keywords[keys])):  # 遍历名称
                 if text == group_keywords[keys][e]:  # 若命中名称
                     if not is_in_cd(group_id, "replyCD") or sender_id == config.superman:  # 判断是否在回复图片的cd中
-                        logging.info("[{}] 请求：{}".format(group_id, keys))
                         pic_name = rand_pic(keys)
+                        logger.info("[{}] 请求：{} => {}".format(group_id, keys, pic_name))
                         mirai_reply_image(group_id, session_key, path='pic\\' + keys + '\\' + pic_name)
                         update_count(group_id, keys)  # 更新统计次数
                         update_cd(group_id, "replyCD")  # 更新cd
-                    rc.hset(group_id, "do_not_repeat", '1')
                     return
 
         for keys in group_keywords:  # 在字典中遍历查找
             for e in range(len(group_keywords[keys])):  # 遍历名称
                 if group_keywords[keys][e] in text:  # 若命中名称
                     if not is_in_cd(group_id, "replyCD") or sender_id == config.superman:  # 判断是否在回复图片的cd中
-                        logging.info("[{}] 请求：{}".format(group_id, keys))
+                        logger.info("[{}] 请求：{} => {}".format(group_id, keys, pic_name))
                         pic_name = rand_pic(keys)
                         mirai_reply_image(group_id, session_key, path='pic\\' + keys + '\\' + pic_name)
                         update_count(group_id, keys)  # 更新统计次数
                         update_cd(group_id, "replyCD")  # 更新cd
-                    rc.hset(group_id, "do_not_repeat", '1')
                     return
 
         for name in quo_data:
             for key in quo_data[name]:
                 if key in text:
                     if not is_in_cd(group_id, "replyCD") or sender_id == config.superman:
-                        logging.info("[{}] 请求：{}".format(group_id, name))
+                        logger.info("[{}] 请求：{} => {}".format(group_id, name, pic_name))
                         quo_words = r.hget("QUOTATION", name).split(',')
                         random_num = random.randint(0, len(quo_words) - 1)
                         mirai_reply_text(group_id, session_key, quo_words[random_num].strip())
                         update_count(group_id, name)  # 更新统计次数
-
-                    rc.hset(group_id, "do_not_repeat", '1')
                     return
+
+    repeater(group_id, session_key, message_chain)
+        
 
 
 def mirai_private_message_handler(group_id, session_key, sender_id, message_id, message_time, message_chain):
@@ -966,4 +947,4 @@ def mirai_private_message_handler(group_id, session_key, sender_id, message_id, 
         mirai_reply_text(sender_id, session_key, rdm_song(texts), friend=True)
     else:  # 临时消息
         mirai_reply_text(sender_id, session_key, rdm_song(texts), temp=True, temp_group_id=group_id)
-        rc.hset(group_id, "do_not_repeat", '1')
+        
