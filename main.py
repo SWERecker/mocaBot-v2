@@ -33,6 +33,8 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
     global handling_flag
     try:
         if message_type == 'GroupMessage':
+            if not rc.exists(str(group_id)):
+                rc.sadd('GROUPS', str(group_id))
             logger.debug("[GROUP] [{}] {},{} => {}".format(group_id, message_id, message_time, message_chain))
             mirai_group_message_handler(group_id, session_key, sender_permission, sender_id, message_chain, at_bot)
 
