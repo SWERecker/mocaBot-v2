@@ -360,6 +360,8 @@ def repeater(group_id, session_key, message):
                 if random_do(fetch_config(group_id, "repeatChance")):
                     logger.debug("[{}] 命中复读条件且不在cd中且命中概率，开始复读".format(group_id))
                     del processed_message_chain[len(processed_message_chain) - 1]
+                    if random_do(10):
+                        mirai_reply_image(group_id, session_key, path='fudu.jpg')
                     mirai_reply_message_chain(group_id, session_key, processed_message_chain)
                     update_cd(group_id, "repeatCD")
                     rc.hset(group_id, "m_last_repeat", json_processed_message_chain)
@@ -937,7 +939,6 @@ def mirai_group_message_handler(group_id, session_key, sender_permission, sender
     repeater(group_id, session_key, message_chain)
         
 
-
 def mirai_private_message_handler(group_id, session_key, sender_id, message_id, message_time, message_chain):
     texts = ""
     for n in range(len(message_chain)):
@@ -947,4 +948,3 @@ def mirai_private_message_handler(group_id, session_key, sender_id, message_id, 
         mirai_reply_text(sender_id, session_key, rdm_song(texts), friend=True)
     else:  # 临时消息
         mirai_reply_text(sender_id, session_key, rdm_song(texts), temp=True, temp_group_id=group_id)
-        
