@@ -355,7 +355,7 @@ def repeater(group_id, session_key, message):
     m_cache_1 = rc.hget(group_id, "m_cache_1")
 
     if not rc.hget(group_id, "m_last_repeat") == json_processed_message_chain:
-        if m_cache_0 == m_cache_1 and rc.hget(group_id, "do_not_repeat") == '0':
+        if m_cache_0 == m_cache_1:
             if not is_in_cd(group_id, "repeatCD"):
                 if random_do(fetch_config(group_id, "repeatChance")):
                     logger.debug("[{}] 命中复读条件且不在cd中且命中概率，开始复读".format(group_id))
