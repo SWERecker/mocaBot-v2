@@ -28,7 +28,7 @@ handling_flag = {}
 
 
 # noinspection PyBroadException
-def mirai_message_handler(message_type, message_id, message_time, sender_id, sender_permission, group_id, at_bot,
+def mirai_message_handler(message_type, message_id, message_time, sender_id, sender_permission, group_id, at_id,
                           message_chain):
     global handling_flag
     try:
@@ -36,7 +36,7 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
             if not rc.exists(str(group_id)):
                 rc.sadd('GROUPS', str(group_id))
             logger.debug("[GROUP] [{}] {},{} => {}".format(group_id, message_id, message_time, message_chain))
-            mirai_group_message_handler(group_id, session_key, sender_permission, sender_id, message_chain, at_bot)
+            mirai_group_message_handler(group_id, session_key, sender_permission, sender_id, message_chain, at_id)
 
         if message_type == 'FriendMessage':
             logger.debug("[FRIEND] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
@@ -55,7 +55,7 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
 
 
 def on_message(ws, message):  # 接受ws数据
-    data = mirai_json_process(3270612406, message)
+    data = mirai_json_process(config.bot_id, message)
     if not handling_flag.get(str(data[5])) or data[0] == 'FriendMessage' or data[0] == 'TempMessage':
         handling_flag[str(data[5])] = True
         tr = threading.Thread(target=mirai_message_handler, args=data)  # 创建子线程

@@ -62,6 +62,10 @@ def update_lp(qq, lp_name):
     返回：无
     """
     r.hset("LPLIST", qq, lp_name)
+    if not r.hexists("CLPTIME", qq):
+        r.hset("CLPTIME", qq, '0')
+    else:
+        r.hincrby("CLPTIME", qq)
     logger.info("修改lp记录：用户{}设置lp为:{}".format(qq, lp_name))
 
 
@@ -94,9 +98,9 @@ def mirai_json_process(bot_id, data):
     }
     """
     group_id = ''
-    at_bot = False
     message_id = 0
     message_time = 0
+    at_qq = 0
     r_json_dict = json.loads(data)
     message_type = r_json_dict.get('type')
     message_chain = r_json_dict.get('messageChain')
@@ -105,15 +109,14 @@ def mirai_json_process(bot_id, data):
         message_time = message_chain[0].get('time')
         del message_chain[0]
         for n in range(len(message_chain)):
-            if message_chain[n].get('type') == 'At' and message_chain[n].get('target') == bot_id:
-                at_bot = True
-                break
+            if message_chain[n].get('type') == 'At':
+                at_qq = int(message_chain[n].get('target'))
     sender_id = r_json_dict["sender"].get('id')
     sender_permission = r_json_dict["sender"].get('permission')
     if r_json_dict["sender"].get('group'):
         group_id = r_json_dict["sender"]["group"].get('id')
 
-    return message_type, message_id, message_time, sender_id, sender_permission, group_id, at_bot, message_chain
+    return message_type, message_id, message_time, sender_id, sender_permission, group_id, at_qq, message_chain
 
 
 def random_do(chance):
@@ -548,6 +551,13 @@ def init_keaipa_list():
     pass
 
 
+def fetch_clp_times(qq):
+    if r.hexists("CLPTIME", qq):
+        return int(r.hget("CLPTIME", qq))
+    else:
+        return 0
+
+
 def match_lp(lp_name, keyword_list):
     """
     功能：匹配最接近的lp
@@ -601,7 +611,7 @@ def rdm_song(text):
 
 
 # noinspection PyBroadException
-def mirai_group_message_handler(group_id, session_key, sender_permission, sender_id, message_chain, at_bot):
+def mirai_group_message_handler(group_id, session_key, sender_permission, sender_id, message_chain, at_id):
     """
     功能：群聊消息处理器
     参数：{
@@ -615,128 +625,137 @@ def mirai_group_message_handler(group_id, session_key, sender_permission, sender
     返回：
     """
     text = fetch_text(message_chain)
-    if at_bot:
-        if '关键词' in text:
-            if not is_in_cd(group_id, "replyHelpCD"):
-                logger.info("[{}] 请求关键词列表".format(group_id))
-                json_data = json.loads(r.hget("KEYWORDS", group_id))
-                create_dict_pic(json_data, str(group_id) + '_key', '关键词')
-                mirai_reply_image(group_id, session_key, str(group_id) + '_key.png')
-                update_cd(group_id, "replyHelpCD")
-            else:
-                logger.debug("[{}] 关键词列表cd冷却中".format(group_id))
-            return
-
-        if "统计次数" in text or "次数统计" in text:
-            if not is_in_cd(group_id, "replyHelpCD"):
-                logger.info("[{}] 请求统计次数".format(group_id))
-                json_data = json.loads(r.hget("COUNT", group_id))
-                create_dict_pic(json_data, str(group_id) + '_count', '次数')  # 将json转换为图片
-                mirai_reply_image(group_id, session_key, str(group_id) + "_count.png")  # 发送图片
-                update_cd(group_id, "replyHelpCD")
-            else:
-                logger.debug("[{}] 统计次数cd冷却中".format(group_id))
-            return
-
-        if "lp排行" in text:
-            if not is_in_cd(group_id, "replyHelpCD"):
-                result = lp_list_rank()
-                create_dict_pic(result, str(group_id) + '_lprank', '前十人数')
-                mirai_reply_image(group_id, session_key, str(group_id) + "_lprank.png")  # 发送图片
-                update_cd(group_id, "replyHelpCD")
-            return
-
-        if "图片数量" in text:
-            if not is_in_cd(group_id, "replyHelpCD"):
-                logger.info("[{}] 请求统计图片数量".format(group_id))
-                json_data = fetch_count_list(group_id)
-                create_dict_pic(json_data, str(group_id) + '_piccount', '图片数量')  # 将json转换为图片
-                mirai_reply_image(group_id, session_key, str(group_id) + "_piccount.png")  # 发送图片
-                update_cd(group_id, "replyHelpCD")
-            else:
-                logger.debug("[{}] 统计次数cd冷却中".format(group_id))
-            return
-
-        if "爬" in text or "爪巴" in text:
-            if not is_in_cd(group_id, "keaiPaCD"):
-                if random_do(fetch_config(group_id, "keaiPaChance")):
-                    logger.info("[{}] moca爬了".format(group_id))
-                    pa_list = json.loads(r.hget("KEAIPA", "PA"))
-                    mirai_reply_image(group_id, session_key, image_id=pa_list[random.randint(0, len(pa_list) - 1)])
-                    update_cd(group_id, "keaiPaCD")
+    if not at_id == 0:
+        if at_id == config.bot_id:
+            if '关键词' in text:
+                if not is_in_cd(group_id, "replyHelpCD"):
+                    logger.info("[{}] 请求关键词列表".format(group_id))
+                    json_data = json.loads(r.hget("KEYWORDS", group_id))
+                    create_dict_pic(json_data, str(group_id) + '_key', '关键词')
+                    mirai_reply_image(group_id, session_key, str(group_id) + '_key.png')
+                    update_cd(group_id, "replyHelpCD")
                 else:
-                    logger.debug("[{}] moca爬，但是没有命中概率".format(group_id))
-            else:
-                logger.debug("[{}] moca爬，但是cd冷却中".format(group_id))
-            update_count(group_id, '爬')
-            return
+                    logger.debug("[{}] 关键词列表cd冷却中".format(group_id))
+                return
 
-        if "可爱" in text or "老婆" in text or "lp" in text or "mua" in text:
-            if not is_in_cd(group_id, "keaiPaCD"):
-                if random_do(fetch_config(group_id, "keaiPaChance")):
-                    logger.info("[{}] moca可爱".format(group_id))
-                    keai_list = json.loads(r.hget("KEAIPA", "KEAI"))
-                    mirai_reply_image(group_id, session_key, image_id=keai_list[random.randint(0, len(keai_list) - 1)])
-                    update_cd(group_id, "keaiPaCD")
+            if "统计次数" in text or "次数统计" in text:
+                if not is_in_cd(group_id, "replyHelpCD"):
+                    logger.info("[{}] 请求统计次数".format(group_id))
+                    json_data = json.loads(r.hget("COUNT", group_id))
+                    create_dict_pic(json_data, str(group_id) + '_count', '次数')  # 将json转换为图片
+                    mirai_reply_image(group_id, session_key, str(group_id) + "_count.png")  # 发送图片
+                    update_cd(group_id, "replyHelpCD")
                 else:
-                    logger.debug("[{}] moca可爱，但是没有命中概率".format(group_id))
-            else:
-                logger.debug("[{}] moca可爱，但是cd冷却中".format(group_id))
-            update_count(group_id, '可爱')
-            return
+                    logger.debug("[{}] 统计次数cd冷却中".format(group_id))
+                return
 
-        if text[:4] == '提交图片':
-            error_flag = False
-            if len(text) > 4:
-                logger.info("[{}] 提交图片".format(group_id))
-                data_list = []
-                category = text[4:]
-                for n in category:
-                    if n in string:
-                        mirai_reply_text(group_id, session_key, '名称中含有非法字符，请重试')
+            if "lp排行" in text:
+                if not is_in_cd(group_id, "replyHelpCD"):
+                    result = lp_list_rank()
+                    create_dict_pic(result, str(group_id) + '_lprank', '前十人数')
+                    mirai_reply_image(group_id, session_key, str(group_id) + "_lprank.png")  # 发送图片
+                    update_cd(group_id, "replyHelpCD")
+                return
+
+            if "图片数量" in text:
+                if not is_in_cd(group_id, "replyHelpCD"):
+                    logger.info("[{}] 请求统计图片数量".format(group_id))
+                    json_data = fetch_count_list(group_id)
+                    create_dict_pic(json_data, str(group_id) + '_piccount', '图片数量')  # 将json转换为图片
+                    mirai_reply_image(group_id, session_key, str(group_id) + "_piccount.png")  # 发送图片
+                    update_cd(group_id, "replyHelpCD")
+                else:
+                    logger.debug("[{}] 统计次数cd冷却中".format(group_id))
+                return
+
+            if "爬" in text or "爪巴" in text:
+                if not is_in_cd(group_id, "keaiPaCD"):
+                    if random_do(fetch_config(group_id, "keaiPaChance")):
+                        logger.info("[{}] moca爬了".format(group_id))
+                        pa_list = json.loads(r.hget("KEAIPA", "PA"))
+                        mirai_reply_image(group_id, session_key, image_id=pa_list[random.randint(0, len(pa_list) - 1)])
+                        update_cd(group_id, "keaiPaCD")
+                    else:
+                        logger.debug("[{}] moca爬，但是没有命中概率".format(group_id))
+                else:
+                    logger.debug("[{}] moca爬，但是cd冷却中".format(group_id))
+                update_count(group_id, '爬')
+                return
+
+            if "可爱" in text or "老婆" in text or "lp" in text or "mua" in text:
+                if not is_in_cd(group_id, "keaiPaCD"):
+                    if random_do(fetch_config(group_id, "keaiPaChance")):
+                        logger.info("[{}] moca可爱".format(group_id))
+                        keai_list = json.loads(r.hget("KEAIPA", "KEAI"))
+                        mirai_reply_image(group_id, session_key, image_id=keai_list[random.randint(0, len(keai_list) - 1)])
+                        update_cd(group_id, "keaiPaCD")
+                    else:
+                        logger.debug("[{}] moca可爱，但是没有命中概率".format(group_id))
+                else:
+                    logger.debug("[{}] moca可爱，但是cd冷却中".format(group_id))
+                update_count(group_id, '可爱')
+                return
+
+            if text[:4] == '提交图片':
+                error_flag = False
+                if len(text) > 4:
+                    logger.info("[{}] 提交图片".format(group_id))
+                    data_list = []
+                    category = text[4:]
+                    for n in category:
+                        if n in string:
+                            mirai_reply_text(group_id, session_key, '名称中含有非法字符，请重试')
+                            return
+                    for n in range(len(message_chain)):
+                        if message_chain[n].get("type") == "Image":
+                            cache_data = {
+                                "url": message_chain[n].get("url"),
+                                "file_name": message_chain[n].get("imageId").split(".")[0].replace("{", "").replace("}", "")
+                            }
+                            logger.info("[{}] 收到：{}".format(group_id, cache_data))
+                            data_list.append(cache_data)
+                    if not bool(data_list):
+                        mirai_reply_text(group_id, session_key, '没有图片')
                         return
-                for n in range(len(message_chain)):
-                    if message_chain[n].get("type") == "Image":
-                        cache_data = {
-                            "url": message_chain[n].get("url"),
-                            "file_name": message_chain[n].get("imageId").split(".")[0].replace("{", "").replace("}", "")
-                        }
-                        logger.info("[{}] 收到：{}".format(group_id, cache_data))
-                        data_list.append(cache_data)
-                if not bool(data_list):
-                    mirai_reply_text(group_id, session_key, '没有图片')
-                    return
-                # upload/{群号}/月/日/{imageId}
-                month = time.strftime("%m")
-                day = time.strftime("%d")
-                if not os.path.exists("upload\\{}\\{}\\{}\\{}".format(group_id, month, day, category)):
-                    os.makedirs("upload\\{}\\{}\\{}\\{}".format(group_id, month, day, category))
+                    # upload/{群号}/月/日/{imageId}
+                    month = time.strftime("%m")
+                    day = time.strftime("%d")
+                    if not os.path.exists("upload\\{}\\{}\\{}\\{}".format(group_id, month, day, category)):
+                        os.makedirs("upload\\{}\\{}\\{}\\{}".format(group_id, month, day, category))
 
-                for file_index in range(len(data_list)):
-                    try:
-                        res = requests.get(data_list[file_index]["url"])
-                        content_type = res.headers.get("Content-Type")
-                        file_type = content_type.split('/')[1]
-                        logger.info("saving {}.{}".format(data_list[file_index]["file_name"], file_type))
-                        logger.info("保存路径：upload\\{}\\{}\\{}\\{}\\{}.{}".format(
-                            group_id, month, day, category, data_list[file_index]["file_name"], file_type))
+                    for file_index in range(len(data_list)):
+                        try:
+                            res = requests.get(data_list[file_index]["url"])
+                            content_type = res.headers.get("Content-Type")
+                            file_type = content_type.split('/')[1]
+                            logger.info("saving {}.{}".format(data_list[file_index]["file_name"], file_type))
+                            logger.info("保存路径：upload\\{}\\{}\\{}\\{}\\{}.{}".format(
+                                group_id, month, day, category, data_list[file_index]["file_name"], file_type))
 
-                        with open("upload\\{}\\{}\\{}\\{}\\{}.{}".format(
-                                group_id, month, day, category, data_list[file_index]["file_name"], file_type
-                        ), "wb") as image_file:
-                            image_file.write(res.content)
-                    except:
-                        logger.error(str(traceback.format_exc()))
-                        error_flag = True
+                            with open("upload\\{}\\{}\\{}\\{}\\{}.{}".format(
+                                    group_id, month, day, category, data_list[file_index]["file_name"], file_type
+                            ), "wb") as image_file:
+                                image_file.write(res.content)
+                        except:
+                            logger.error(str(traceback.format_exc()))
+                            error_flag = True
 
-                if error_flag:
-                    mirai_reply_text(group_id, session_key, '提交失败')
+                    if error_flag:
+                        mirai_reply_text(group_id, session_key, '提交失败')
+                    else:
+                        file_count = len(data_list)
+                        mirai_reply_text(group_id, session_key, '成功，收到{}张图片'.format(file_count))
                 else:
-                    file_count = len(data_list)
-                    mirai_reply_text(group_id, session_key, '成功，收到{}张图片'.format(file_count))
-            else:
-                mirai_reply_text(group_id, session_key, '参数错误')
-            return
+                    mirai_reply_text(group_id, session_key, '参数错误')
+                return
+        else:
+            if text.replace('老婆', 'lp') == '换lp次数':
+                count = fetch_clp_times(at_id)
+                if count > 1:
+                    mirai_reply_text(group_id, session_key, '{}换了{}次lp了哦~'.format(at_id, count))
+                else:
+                    mirai_reply_text(group_id, session_key, '{}还没有换过lp呢~'.format(at_id))
+                return
     else:
         init_keyword_list(group_id)
         group_keywords = json.loads(r.hget("KEYWORDS", group_id))
@@ -901,6 +920,14 @@ def mirai_group_message_handler(group_id, session_key, sender_permission, sender
 
         if text[:4] == '随机选歌':
             mirai_reply_text(group_id, session_key, rdm_song(text))
+            return
+
+        if '换lp次数' in text:
+            count = fetch_clp_times(sender_id)
+            if count > 1:
+                mirai_reply_text(group_id, session_key, '你换了{}次lp了哦~'.format(count))
+            else:
+                mirai_reply_text(group_id, session_key, '你还没有换过lp呢~')
             return
 
         for keys in group_keywords:  # 在字典中遍历查找

@@ -19,3 +19,4 @@ ws_addr = 'ws://{}:{}/message?sessionKey='.format(server_name, server_port)
 mirai_path = 'C:\\mirai'
 
 superman = 565379987
+bot_id = 3270612406
