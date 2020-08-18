@@ -751,7 +751,7 @@ def mirai_group_message_handler(group_id, session_key, sender_permission, sender
         else:
             if text.replace('老婆', 'lp') == '换lp次数':
                 count = fetch_clp_times(at_id)
-                if count > 1:
+                if count > 0:
                     mirai_reply_text(group_id, session_key, '{}换了{}次lp了哦~'.format(at_id, count))
                 else:
                     mirai_reply_text(group_id, session_key, '{}还没有换过lp呢~'.format(at_id))
@@ -924,7 +924,7 @@ def mirai_group_message_handler(group_id, session_key, sender_permission, sender
 
         if '换lp次数' in text:
             count = fetch_clp_times(sender_id)
-            if count > 1:
+            if count > 0:
                 mirai_reply_text(group_id, session_key, '你换了{}次lp了哦~'.format(count))
             else:
                 mirai_reply_text(group_id, session_key, '你还没有换过lp呢~')
