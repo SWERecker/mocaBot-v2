@@ -3,5 +3,5 @@
 
 ## This project is under development 
 
-## [Wiki](https://wiki.bang-dream.tech/)
+## [Wiki](https://mocabot.xyz)
 
