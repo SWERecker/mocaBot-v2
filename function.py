@@ -972,6 +972,8 @@ def mirai_private_message_handler(group_id, session_key, sender_id, message_id, 
         if message_chain[n]["type"] == "Plain":
             texts += message_chain[n]["text"]
     if group_id == 0:  # 好友消息
-        mirai_reply_text(sender_id, session_key, rdm_song(texts), friend=True)
+        if texts[:4] == '随机选歌':
+            mirai_reply_text(sender_id, session_key, rdm_song(texts), friend=True)
     else:  # 临时消息
-        mirai_reply_text(sender_id, session_key, rdm_song(texts), temp=True, temp_group_id=group_id)
+        if texts[:4] == '随机选歌':
+            mirai_reply_text(sender_id, session_key, rdm_song(texts), temp=True, temp_group_id=group_id)
