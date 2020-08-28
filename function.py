@@ -930,6 +930,28 @@ def mirai_group_message_handler(group_id, session_key, sender_permission, sender
                 mirai_reply_text(group_id, session_key, '你还没有换过lp呢~')
             return
 
+        if len(text) > 4 and text[:4] == '选择图片':
+            paras = text[4:].replace('，', ',').split(',')
+            if not len(paras) == 2:
+                mirai_reply_text(group_id, session_key, '参数数量错误')
+                return
+            else:
+                name = paras[0]
+                filename = paras[1]
+            for keys in group_keywords:  # 在字典中遍历查找
+                for e in range(len(group_keywords[keys])):  # 遍历名称
+                    if name == group_keywords[keys][e]:  # 若命中名称
+                        if not is_in_cd(group_id, "replyCD") or sender_id == config.superman:  # 判断是否在回复图片的cd中
+                            file_path = 'pic\\' + name + '\\' + filename
+                            logger.info("[{}] 请求：{} => {}".format(group_id, keys, filename))
+                            if os.path.exists(file_path):
+                                mirai_reply_image(group_id, session_key, path=file_path)
+                                update_count(group_id, keys)  # 更新统计次数
+                                update_cd(group_id, "replyCD")  # 更新cd
+                            else:
+                                mirai_reply_text(group_id, session_key, '请求的文件不存在')
+            return
+
         for keys in group_keywords:  # 在字典中遍历查找
             for e in range(len(group_keywords[keys])):  # 遍历名称
                 if text == group_keywords[keys][e]:  # 若命中名称
