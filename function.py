@@ -937,19 +937,48 @@ def mirai_group_message_handler(group_id, session_key, sender_permission, sender
                 return
             else:
                 name = paras[0]
-                filename = paras[1]
-            for keys in group_keywords:  # 在字典中遍历查找
-                for e in range(len(group_keywords[keys])):  # 遍历名称
-                    if name == group_keywords[keys][e]:  # 若命中名称
-                        if not is_in_cd(group_id, "replyCD") or sender_id == config.superman:  # 判断是否在回复图片的cd中
+                number = paras[1]
+                if name in group_keywords:
+                    file_list = json.loads(rc.hget("FILES", name))
+                    
+                    if not is_in_cd(group_id, "replyCD") or sender_id == config.superman:  # 判断是否在回复图片的cd中
+                        try:
+                            file_count = int(number)
+                        except ValueError:
+                            num_file = len(file_list)
+                            mirai_reply_text(group_id, session_key, '图片序号格式错误，{}共有{}张图片，序号应为1~{}'.format(name, num_file, num_file))
+                            return
+                            
+                        if file_count > len(file_list):
+                            num_file = len(file_list)
+                            mirai_reply_text(group_id, session_key, '图片序号错误，{}共有{}张图片，序号应为1~{}'.format(name, num_file, num_file))
+                            return
+                        
+                        if file_count < 10:
+                            file_name = "000{}".format(file_count)
+                        elif 10 <= file_count < 100:
+                            file_name = "00{}".format(file_count)
+                        elif 100 <= file_count < 1000:
+                            file_name = "0{}".format(file_count)
+                        else:
+                            file_name = "{}".format(file_count)
+                            
+                        filename = "NOT_FOUND"
+                        for file in file_list:
+                            if file_name in file:
+                                filename = file
+                                break
+                                
+                        if not filename == "NOT_FOUND":
                             file_path = 'pic\\' + name + '\\' + filename
-                            logger.info("[{}] 请求：{} => {}".format(group_id, keys, filename))
-                            if os.path.exists(file_path):
-                                mirai_reply_image(group_id, session_key, path=file_path)
-                                update_count(group_id, keys)  # 更新统计次数
-                                update_cd(group_id, "replyCD")  # 更新cd
-                            else:
-                                mirai_reply_text(group_id, session_key, '请求的文件不存在')
+                            logger.info("[{}] 请求：{} => {}".format(group_id, name, filename))
+                            mirai_reply_image(group_id, session_key, path=file_path)
+                            update_count(group_id, name)  # 更新统计次数
+                            update_cd(group_id, "replyCD")  # 更新cd
+                        else:
+                            mirai_reply_text(group_id, session_key, '请求的文件不存在')
+                else:
+                    mirai_reply_text(group_id, session_key, '名称不存在')
             return
 
         for keys in group_keywords:  # 在字典中遍历查找
