@@ -37,7 +37,7 @@ def mirai_message_handler(message_type, message_id, message_time, sender_id, sen
                 rc.sadd('GROUPS', str(group_id))
             logger.debug("[GROUP] [{}] {},{} => {}".format(group_id, message_id, message_time, message_chain))
             mirai_group_message_handler(group_id, session_key, sender_permission, sender_id, message_chain, at_id)
-
+            mirai_group_event_handler(group_id, session_key, sender_permission, sender_id, message_chain, at_id)
         if message_type == 'FriendMessage':
             logger.debug("[FRIEND] [{}] {},{} => {}".format(sender_id, message_id, message_time, message_chain))
             mirai_private_message_handler(group_id, session_key, sender_id, message_id, message_time, message_chain)

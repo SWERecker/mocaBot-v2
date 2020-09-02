@@ -16,7 +16,7 @@ r = redis.Redis(connection_pool=pool)
 cache_pool = redis.ConnectionPool(host='localhost', port=6379, db=1, decode_responses=True)
 rc = redis.Redis(connection_pool=cache_pool)
 string = '/\:*<>|"'
-url = 'http://api.mocabot.xyz/api'
+
 dictionary = {
     "band": {
         "ro": "Roselia",
@@ -595,7 +595,7 @@ def rdm_song(text):
         if t[:2] == '比赛':
             para["data"] = 'comp'
     logger.info(para)
-    res = requests.get(url, params=para)
+    res = requests.get(config.random_url, params=para)
     logger.info(res.url)
     logger.info("result: " + res.text)
     result = json.loads(res.text)
@@ -1028,3 +1028,14 @@ def mirai_private_message_handler(group_id, session_key, sender_id, message_id, 
     else:  # 临时消息
         if texts[:4] == '随机选歌':
             mirai_reply_text(sender_id, session_key, rdm_song(texts), temp=True, temp_group_id=group_id)
+
+
+def mirai_group_event_handler(group_id, session_key, sender_permission, sender_id, message_chain, at_id):
+    text = fetch_text(message_chain)
+    if (text.count("啊") + text.count("阿")) > 5:
+        if fetch_config(group_id, "antiJiegeVirus") == "on":
+            mirai_reply_text(group_id, session_key, "检测到杰哥病毒！")
+            mute_data = {"sessionKey": session_key, "target": group_id, "memberId": sender_id, "time": 60}
+            res = requests.post(config.mute_url, json.dumps(mute_data))
+            logger.info("清除杰哥病毒！返回：{}".format(res.text))
+        return

@@ -7,6 +7,7 @@ import config
 
 logger = logging.getLogger('botlogger')
 
+
 def mirai_auth():
     """
     功能：mirai认证
